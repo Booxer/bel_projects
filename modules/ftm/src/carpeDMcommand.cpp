@@ -28,6 +28,98 @@ namespace carpeDMcommand {
   const std::string exIntro = "carpeDMcommand: ";
 }
 
+bool CarpeDM::blockLock(const std::string& targetName, bool clearQueues) {
+
+    uint32_t cmdWrInc, hash;
+    uint8_t b[_T_CMD_SIZE_ + _32b_SIZE_];
+
+    //check for covenants
+    if(optimisedS2R) {
+      cmI x = ct.lookup(targetName);
+      if (ct.isOk(x) && isCovenantPending(x)) {
+        throw std::runtime_error("Locking block <" + targetName + "> for modification would violate a safe2remove-covenant!");
+      }
+
+    }
+    hash     = hm.lookup(targetName, "queueLock: unknown target ");
+    auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+    auto* x = (AllocMeta*)&(*it);
+    uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
+    uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
+    uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
+    uint32_t eWrIdxs = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&x->b[BLOCK_CMDQ_WR_IDXS]);
+    
+    //from here on, we do EVERYTHING live so we can be sure it's up to date.
+            
+    //add lock bit to write indices and write back
+    eWrIdxs = (eWrIdxs & BLOCK_CMDQ_WR_IDXS_SMSK) | BLOCK_CMDQ_WR_LCK_SMSK;
+    ebWriteWord(ebd, adrWrIdxs, eWrIdxs);
+      
+    //confirm lock bit
+
+    uint32_t confirmLock = ebReadWord(ebd, adrWrIdxs) & BLOCK_CMDQ_WR_LCK_SMSK;
+    if(!confirmLock) {throw std::runtime_error( "Failed to lock block <" + targetName + ">"); }
+    
+    uint32_t oldRdIdxs, newRdIdxs = -1; // set out of range initial value on purpose
+    uint32_t reps = 0, maxReps = 10;
+    // check spin lock. update read-indices until they didn't change anymore.
+    while(oldRdIdxs != newRdIdxs) {
+      if (reps == maxReps) return false;
+      //sleep 0.001;  
+      oldRdIdxs = newRdIdxs; //save 
+      newRdIdxs = ebReadWord(ebd, adrRdIdxs);
+      maxReps++;
+    }
+
+    if(clearQueues) {
+      uint32_t newWrIdxs = (eWrIdxs & ~BLOCK_CMDQ_WR_IDXS_MSK) | (newRdIdxs & BLOCK_CMDQ_RD_IDXS_MSK); 
+      ebWriteWord(ebd, adrWrIdxs, newWrIdxs);
+    }
+    return true;    
+}
+
+bool CarpeDM::blockClearQueues(const std::string& targetName) {
+  uint32_t hash;
+  hash     = hm.lookup(targetName, "queueLock: unknown target ");
+  auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x = (AllocMeta*)&(*it);
+  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
+  uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
+  uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
+  //confirm lock
+  uint32_t eWrIdxs = ebReadWord(ebd, adrWrIdxs);
+  uint32_t confirmLock = eWrIdxs & BLOCK_CMDQ_WR_LCK_SMSK;
+  if(!confirmLock) return false;
+    
+  //copy read indices to write indices, clearing queues
+  uint32_t eRdIdxs = ebReadWord(ebd, adrRdIdxs);
+  uint32_t newWrIdxs = (eWrIdxs & ~BLOCK_CMDQ_WR_IDXS_MSK) | (eRdIdxs & BLOCK_CMDQ_RD_IDXS_MSK);
+  ebWriteWord(ebd, adrWrIdxs, newWrIdxs);
+  return true;
+}
+
+bool CarpeDM::blockUnlock(const std::string& targetName) {
+  uint32_t hash = hm.lookup(targetName, "queueUnlock: unknown target ");
+  auto it  = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x  = (AllocMeta*)&(*it);
+  uint32_t adrWrIdxs = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_WR_IDXS;
+  uint32_t eWrIdxs = ebReadWord(ebd, adrWrIdxs) & ~BLOCK_CMDQ_WR_LCK_SMSK;
+  ebWriteWord(ebd, adrWrIdxs, eWrIdxs);
+  return true;
+
+}
+
+bool CarpeDM::blockIsLocked(const std::string& targetName) {
+  uint32_t hash;
+  hash    = hm.lookup(targetName, "queueLock: unknown target ");
+  auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x = (AllocMeta*)&(*it);
+  uint32_t adrWrIdxs  = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_WR_IDXS;
+  bool confirmLock = (ebReadWord(ebd, adrWrIdxs) & BLOCK_CMDQ_WR_LCK_SMSK) != 0;
+  return confirmLock;
+}
+
+
 boost::optional<std::pair<int, int>> CarpeDM::parseCpuAndThr(vertex_t v, Graph& g) {
 
   uint8_t  cpu, thr;

@@ -296,6 +296,10 @@ public:
                 int clear(bool force);                              // clears all nodes from DM
 
 // Command Generation and Dispatch ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+               bool blockLock(const std::string& targetName, bool clearQueues=false);
+               bool blockClearQueues(const std::string& targetName);
+               bool blockUnlock(const std::string& targetName);
+               bool blockIsLocked(const std::string& targetName);
                 int sendCommandsDot(const std::string& s); //Sends a dotfile of commands to the DM
                 int sendCommandsDotFile(const std::string& fn);
                 int sendCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc); //Send a command to Block <targetName> on CPU <cpuIdx> via Etherbone

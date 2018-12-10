@@ -242,6 +242,12 @@ uint32_t* cmd(uint32_t* node, uint32_t* thrData) {
     return ret;
   }
 
+  const uint32_t wrFlags = tg[BLOCK_CMDQ_WR_IDXS >> 2] & BLOCK_CMDQ_WR_FLG_SMSK;
+  if(wrFlags & BLOCK_CMDQ_WR_LCK_SMSK) { //if the target queues are write locked, abort
+    return ret;
+  }
+
+
   wrIdx   = ((uint8_t *)tg + BLOCK_CMDQ_WR_IDXS + _32b_SIZE_  - prio -1);                           // calculate pointer (8b) to current write index
   bufOffs = (*wrIdx & Q_IDX_MAX_MSK) / (_MEM_BLOCK_SIZE / _T_CMD_SIZE_  ) * _PTR_SIZE_;             // calculate Offsets
   elOffs  = (*wrIdx & Q_IDX_MAX_MSK) % (_MEM_BLOCK_SIZE / _T_CMD_SIZE_  ) * _T_CMD_SIZE_;
@@ -343,8 +349,8 @@ uint32_t* block(uint32_t* node, uint32_t* thrData) {
 
   node[NODE_FLAGS >> 2] |= NFLG_PAINT_LM32_SMSK; // set paint bit to mark this node as visited
 
-  //3 ringbuffers -> 3 wr indices, 3 rd indices (one per priority). If any differ, there's work to do
-  if( (*awrOffs & 0x00ffffff) != (*ardOffs & 0x00ffffff) ) {
+  //3 ringbuffers -> 3 wr indices, 3 rd indices (one per priority). If any differ and async flush flag is not present, there's work to do
+  if(!(*awrOffs & BLOCK_CMDQ_WR_LCK_SMSK)  && ((*awrOffs & BLOCK_CMDQ_WR_IDXS_SMSK) != (*ardOffs & BLOCK_CMDQ_RD_IDXS_SMSK)) ) {
     //only process one command, and that of the highest priority. default is low, check up
     prio = PRIO_LO;
     //MSB first: bit 31 is at byte offset 0!
@@ -379,14 +385,14 @@ uint32_t* block(uint32_t* node, uint32_t* thrData) {
       actTmp |= ((--qty) & ACT_QTY_MSK) << ACT_QTY_POS;
       *act    = actTmp;
     } else {
-      skipOne = 1; //qty was exhausted before decrement, can be skipped
+      skipOne = 1; //qty was exhausted before decrement, action can be skipped
       DBPRINT2("#%02u: Found deactivated command\n" );
     }
 
     *(rdIdx) = (*rdIdx + (uint8_t)(qty == 0) ) & Q_IDX_MAX_OVF_MSK; //pop element if qty exhausted
 
     //If we could skip and there are more cmds pending, exit and let the scheduler come back directly to this block for the next cmd in our queue
-    if( skipOne && ((*awrOffs & 0x00ffffff) != (*ardOffs & 0x00ffffff)) ) {
+    if( skipOne && ((*awrOffs & BLOCK_CMDQ_WR_IDXS_SMSK) != (*ardOffs & BLOCK_CMDQ_RD_IDXS_SMSK)) ) {
       DBPRINT2("#%02u: Found more pending commands, skip deactivated cmd and process next cmd\n" );
       return node;
     }
