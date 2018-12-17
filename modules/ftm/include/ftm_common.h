@@ -236,20 +236,31 @@
 #define BLOCK_CMDQ_WR_IDXS      (BLOCK_CMDQ_IL_PTR  + _PTR_SIZE_)
 #define BLOCK_CMDQ_RD_IDXS      (BLOCK_CMDQ_WR_IDXS + _32b_SIZE_)
 #define BLOCK_CMDQ_PTRS          BLOCK_CMDQ_LO_PTR
+#define BLOCK_CMDQ_FLAGS        (BLOCK_CMDQ_RD_IDXS + _32b_SIZE_)
 
 #define BLOCK_CMDQ_IDX_IL    (3 - PRIO_IL)
 #define BLOCK_CMDQ_IDX_HI    (3 - PRIO_HI)
 #define BLOCK_CMDQ_IDX_LO    (3 - PRIO_LO)
 
-//Lock Flag. Indicates DM
-#define BLOCK_CMDQ_WR_FLG_MSK   0xf
-#define BLOCK_CMDQ_WR_FLG_POS   24
-#define BLOCK_CMDQ_WR_FLG_SMSK  (BLOCK_CMDQ_WR_FLG_MSK << BLOCK_CMDQ_WR_FLG_POS)
+//Lock Flags. Signals DM to not change this queue's content
+#define BLOCK_CMDQ_FLGS_MSK   0x7
+#define BLOCK_CMDQ_FLGS_POS   0
+#define BLOCK_CMDQ_FLGS_SMSK  (BLOCK_CMDQ_FLGS_MSK << BLOCK_CMDQ_FLGS_POS)
 
+//DNW - signal Do not Write to DM
+#define BLOCK_CMDQ_DNW_MSK   0x1
+#define BLOCK_CMDQ_DNW_POS   0
+#define BLOCK_CMDQ_DNW_SMSK  (BLOCK_CMDQ_DNW_MSK << BLOCK_CMDQ_DNW_POS)
 
-#define BLOCK_CMDQ_WR_LCK_MSK   0x1
-#define BLOCK_CMDQ_WR_LCK_POS   24
-#define BLOCK_CMDQ_WR_LCK_SMSK  (BLOCK_CMDQ_WR_LCK_MSK << BLOCK_CMDQ_WR_LCK_POS)
+//DNR - signal Do Not Read to DM
+#define BLOCK_CMDQ_DNR_MSK   0x1
+#define BLOCK_CMDQ_DNR_POS   1
+#define BLOCK_CMDQ_DNR_SMSK  (BLOCK_CMDQ_DNR_MSK << BLOCK_CMDQ_DNR_POS)
+
+//RWL - signal Retry Write when Locked to DM
+#define BLOCK_CMDQ_RWL_MSK   0x1
+#define BLOCK_CMDQ_RWL_POS   2
+#define BLOCK_CMDQ_RWL_SMSK  (BLOCK_CMDQ_DNR_MSK << BLOCK_CMDQ_DNR_POS)
 
 #define BLOCK_CMDQ_WR_IDXS_MSK  0x00ffffff
 #define BLOCK_CMDQ_WR_IDXS_POS  0

@@ -567,10 +567,10 @@ int main(int argc, char* argv[]) {
 
       return 0;
     }
-    else if (cmp == "clear") {
+    else if (cmp == "asyncclear") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          cdm.blockClearQueues(targetName);
+          cdm.blockAsyncClearQueues(targetName, false, false);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not clear block " << targetName << "'s queues. Cause: " << err.what() << std::endl;
         }
@@ -587,6 +587,19 @@ int main(int argc, char* argv[]) {
 
       return 0;
     }
+    else if (cmp == "showlocks") {
+      vStrC res;
+      try {
+        res = cdm.getLockedBlocks(true, true);
+      } catch (std::runtime_error const& err) {
+        std::cerr << program << ": Could not list locked blocks. Cause: " << err.what() << std::endl;
+      }
+      std::cout << "Locked Queues: " << res.size() << std::endl;
+      for (auto s : res) {std::cout << s << std::endl;}
+
+      return 0;
+    }
+    
     else if (cmp == "queue") {
         if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
         std::string report;

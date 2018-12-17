@@ -242,10 +242,10 @@ uint32_t* cmd(uint32_t* node, uint32_t* thrData) {
     return ret;
   }
 
-  const uint32_t wrFlags = tg[BLOCK_CMDQ_WR_IDXS >> 2] & BLOCK_CMDQ_WR_FLG_SMSK;
-  if(wrFlags & BLOCK_CMDQ_WR_LCK_SMSK) { //if the target queues are write locked, abort
-    return ret;
-  }
+  //check if the target queues are write locked
+  const uint32_t qFlags = tg[BLOCK_CMDQ_FLAGS >> 2];
+    //  TODO find out if a retry makes sense
+  if(qFlags & BLOCK_CMDQ_DNW_SMSK) { return ret; }
 
 
   wrIdx   = ((uint8_t *)tg + BLOCK_CMDQ_WR_IDXS + _32b_SIZE_  - prio -1);                           // calculate pointer (8b) to current write index
@@ -344,13 +344,15 @@ uint32_t* block(uint32_t* node, uint32_t* thrData) {
   uint8_t skipOne = 0;
 
   uint32_t *ardOffs = node + (BLOCK_CMDQ_RD_IDXS >> 2), *awrOffs = node + (BLOCK_CMDQ_WR_IDXS >> 2);
-  uint32_t bufOffs, elOffs, prio, actTmp, atype;
+  uint32_t bufOffs, elOffs, prio, actTmp, atype, qFlags = *((uint32_t*)(node + (BLOCK_CMDQ_FLAGS >> 2)));
   uint32_t qty;
 
   node[NODE_FLAGS >> 2] |= NFLG_PAINT_LM32_SMSK; // set paint bit to mark this node as visited
 
-  //3 ringbuffers -> 3 wr indices, 3 rd indices (one per priority). If any differ and async flush flag is not present, there's work to do
-  if(!(*awrOffs & BLOCK_CMDQ_WR_LCK_SMSK)  && ((*awrOffs & BLOCK_CMDQ_WR_IDXS_SMSK) != (*ardOffs & BLOCK_CMDQ_RD_IDXS_SMSK)) ) {
+  //3 ringbuffers -> 3 wr indices, 3 rd indices (one per priority).
+  //If Do not Read flag is not set and the indices differ, there's work to do
+  if(!(qFlags & BLOCK_CMDQ_DNR_SMSK) 
+  && ((*awrOffs & BLOCK_CMDQ_WR_IDXS_SMSK) != (*ardOffs & BLOCK_CMDQ_RD_IDXS_SMSK)) ) {
     //only process one command, and that of the highest priority. default is low, check up
     prio = PRIO_LO;
     //MSB first: bit 31 is at byte offset 0!
