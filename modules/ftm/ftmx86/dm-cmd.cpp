@@ -54,6 +54,10 @@ static void help(const char *program) {
   fprintf(stderr, "  clear <target>            Clears all queues of a locked block allowing modification/refill during active runtime\n");
   fprintf(stderr, "  unlock <target>           Unlocks all queues of a block, making them visible to the DM\n");
   //fprintf(stderr, "  force                     Force cursor to match origin\n");
+  fprintf(stderr, "  lock <target>                                 Locks a block for asynchronous queue manipulation mode.\nACTIVE LOCK MEANS DM WILL NEITHER WRITE TO NOR READ FROM THIS BLOCK'S QUEUES!\n");
+  fprintf(stderr, "  asyncflush <target>  <prios>                  Flushes all pending commands of given priorities (3b Hi-Md-Lo -> 0x0..0x7) in an locked block of the schedule\n");
+  fprintf(stderr, "  unlock <target>                               Unlocks a block from asynchronous queue manipulation mode\n");
+  fprintf(stderr, "  showlocks <target>                            Lists all currently locked blocks\n");
   fprintf(stderr, "  staticflush <target> <prios>                  Flushes all pending commands of given priorities (3b Hi-Md-Lo -> 0x0..0x7) in an inactive (static) block of the schedule\n");
   fprintf(stderr, "  staticflushpattern <pattern> <prios>          Flushes all pending commands of given priorities (3b Hi-Md-Lo -> 0x0..0x7) in an inactive (static) pattern of the schedule\n");
   fprintf(stderr, "\nQueued commands (viable options in square brackets):\n");
@@ -567,14 +571,15 @@ int main(int argc, char* argv[]) {
 
       return 0;
     }
-    else if (cmp == "asyncclear") {
+    else if (cmp == "asyncflush") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
+      if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
+      uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
       try {
-          cdm.blockAsyncClearQueues(targetName, false, false);
+          cdm.blockAsyncFlushQueues(targetName, false, false, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1));
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not clear block " << targetName << "'s queues. Cause: " << err.what() << std::endl;
         }
-
       return 0;
     }
     else if (cmp == "unlock") {
@@ -594,7 +599,7 @@ int main(int argc, char* argv[]) {
       } catch (std::runtime_error const& err) {
         std::cerr << program << ": Could not list locked blocks. Cause: " << err.what() << std::endl;
       }
-      std::cout << "Locked Queues: " << res.size() << std::endl;
+      std::cout << "Locked Blocks: " << res.size() << std::endl;
       for (auto s : res) {std::cout << s << std::endl;}
 
       return 0;

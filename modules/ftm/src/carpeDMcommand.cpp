@@ -48,28 +48,35 @@ void CarpeDM::blockLock(const std::string& targetName, bool readLock, bool write
     uint32_t adrQFlags   = adrBase + BLOCK_CMDQ_FLAGS;
     uint32_t flags = (ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK);
 
-    sLog << "adr 0x" << std::hex <<  adrQFlags << " flags 0x" << flags << " newflags 0x" << (flags | flagsToAdd) << std::endl;
+    //sLog << "adr 0x" << std::hex <<  adrQFlags << " flags 0x" << flags << " newflags 0x" << (flags | flagsToAdd) << std::endl;
     //add lock bits to flags
     ebWriteWord(ebd, adrQFlags, flags | flagsToAdd);
    
     
 }
 
-void CarpeDM::blockAsyncClearQueues(const std::string& targetName, bool autoLock, bool autoUnlock) {
+void CarpeDM::blockAsyncFlushQueues(const std::string& targetName, bool autoLock, bool autoUnlock, bool prioIl, bool prioHi, bool prioLo) {
   //check if locked
   if(autoLock) blockLock(targetName);
-  if (!blockIsLocked(targetName, true, true)) throw std::runtime_error("No async clear of block <" + targetName + ">'s queues possible, block is not locked.");
+  if (!blockIsLocked(targetName, true, true)) throw std::runtime_error("No async flush of block <" + targetName + ">'s queues possible, block is not locked.");
 
   uint32_t hash;
-  hash      = hm.lookup(targetName, "queueLock: unknown target ");
+  hash      = hm.lookup(targetName, "blockLock: unknown target ");
   auto it   = atDown.lookupHash(hash, carpeDMcommand::exIntro);
   auto* x   = (AllocMeta*)&(*it);
   uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
   uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
   uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
-  //copy read indices to write indices, clearing queues
-  uint32_t eRdIdxs = ebReadWord(ebd, adrRdIdxs);
-  uint32_t newWrIdxs = eRdIdxs & BLOCK_CMDQ_RD_IDXS_MSK;
+  //copy read indices of requested priorities to write indices, clearing queues
+  const uint32_t cpyMsk =  ~(((uint8_t)(prioIl-1) << (PRIO_IL * 8)) 
+                           | ((uint8_t)(prioHi-1) << (PRIO_HI * 8))
+                           | ((uint8_t)(prioLo-1) << (PRIO_LO * 8)));
+
+
+  uint32_t eRdIdxs = ebReadWord(ebd, adrRdIdxs) & BLOCK_CMDQ_RD_IDXS_SMSK;
+  uint32_t eWrIdxs = ebReadWord(ebd, adrWrIdxs) & BLOCK_CMDQ_WR_IDXS_SMSK;
+  uint32_t newWrIdxs = (eWrIdxs & ~cpyMsk) | (eRdIdxs & cpyMsk);
+  //sLog << "cpyMsk 0x" << std::hex << cpyMsk << " rd 0x" << (eRdIdxs & cpyMsk) <<  " wr 0x" <<  (eWrIdxs & ~cpyMsk) << "new 0x " << newWrIdxs << std::endl;
   ebWriteWord(ebd, adrWrIdxs, newWrIdxs);
   if(autoUnlock) blockUnlock(targetName);
 
@@ -77,7 +84,7 @@ void CarpeDM::blockAsyncClearQueues(const std::string& targetName, bool autoLock
 
 void CarpeDM::blockUnlock(const std::string& targetName, bool readLock, bool writeLock) {
   const uint32_t flagsToRem = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
-  uint32_t hash = hm.lookup(targetName, "queueUnlock: unknown target ");
+  uint32_t hash = hm.lookup(targetName, "blockUnlock: unknown target ");
   auto it  = atDown.lookupHash(hash, carpeDMcommand::exIntro);
   auto* x  = (AllocMeta*)&(*it);
   uint32_t adrQFlags  = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_FLAGS;

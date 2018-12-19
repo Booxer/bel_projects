@@ -298,7 +298,8 @@ public:
 // Command Generation and Dispatch ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                //Block Queue Locking and Asynchronous clear
                void blockLock(const std::string& targetName, bool readLock=true, bool writeLock=true);
-               void blockAsyncClearQueues(const std::string& targetName, bool autoLock=false, bool autoUnlock=false);
+               void blockAsyncFlushQueues(const std::string& targetName, bool autoLock=false, bool autoUnlock=false, bool prioIl=false, bool prioHi=false, bool prioLo=false);
+               void blockAsyncFlushAllQueues(const std::string& targetName, bool autoLock=false, bool autoUnlock=false) { blockAsyncFlushQueues(targetName, autoLock, autoUnlock, true, true, true); }
                void blockUnlock(const std::string& targetName, bool readLock=true, bool writeLock=true);
                bool blockIsLocked(const std::string& targetName, bool checkReadLock=true, bool checkWriteLock=true);
               vStrC getLockedBlocks(bool checkReadLock, bool checkWriteLock);
