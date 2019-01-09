@@ -55,6 +55,30 @@ void CarpeDM::blockLock(const std::string& targetName, bool readLock, bool write
     
 }
 
+vEbwrs& ew CarpeDM::blockLock(const Lock& , vEbwrs& ew) {
+
+    uint32_t hash;
+    const uint32_t flagsToAdd = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
+
+    //check for covenants
+    if(optimisedS2R) {
+      cmI x = ct.lookup(targetName);
+      if (ct.isOk(x) && isCovenantPending(x)) {
+        throw std::runtime_error("Locking block <" + targetName + "> for modification would violate a safe2remove-covenant!");
+      }
+
+    }
+    hash     = hm.lookup(targetName, "queueLock: unknown target ");
+    auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+    auto* x = (AllocMeta*)&(*it);
+    uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
+    uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
+
+   
+   
+    
+}
+
 void CarpeDM::blockAsyncFlushQueues(const std::string& targetName, bool autoLock, bool autoUnlock, bool prioIl, bool prioHi, bool prioLo) {
   //check if locked
   if(autoLock) blockLock(targetName);
@@ -82,6 +106,33 @@ void CarpeDM::blockAsyncFlushQueues(const std::string& targetName, bool autoLock
 
 }
 
+vEbwrs& ew CarpeDM::blockAsyncClearQueues(const std::string& targetName, vEbwrs& ew) {
+  uint32_t hash;
+  hash      = hm.lookup(targetName, "block: unknown target ");
+  auto it   = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x   = (AllocMeta*)&(*it);
+  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
+  //reset read and write indices
+  ew.va += (adrBase + BLOCK_CMDQ_RD_IDXS);
+  ew.va += (adrBase + BLOCK_CMDQ_WR_IDXS);
+
+
+
+}
+
+vEbwrs& ew CarpeDM::blockUnlock(const Lock& lock, vEbwrs& ew ) {
+
+  const uint32_t flagsToRem = ((uint32_t)lock.rdClr << BLOCK_CMDQ_DNR_POS) | ((uint32_t)lock.wrClr << BLOCK_CMDQ_DNW_POS);
+  uint32_t hash = hm.lookup(targetName, "blockUnlock: unknown target ");
+  auto it  = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x  = (AllocMeta*)&(*it);
+  uint32_t adrQFlags  = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_FLAGS;
+  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
+  uint32_t newQFlags  = qFlags & ~(flagsToRem);
+  
+
+}
+
 void CarpeDM::blockUnlock(const std::string& targetName, bool readLock, bool writeLock) {
   const uint32_t flagsToRem = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
   uint32_t hash = hm.lookup(targetName, "blockUnlock: unknown target ");
@@ -94,7 +145,31 @@ void CarpeDM::blockUnlock(const std::string& targetName, bool readLock, bool wri
 
 }
 
-bool CarpeDM::blockIsLocked(const std::string& targetName, bool checkReadLock, bool checkWriteLock) {
+
+
+bool CarpeDM::blockIsLocked(const std::string& targetName, bool checkReadLock, bool checkWriteLock) 
+{
+    if (!(checkReadLock & checkWriteLock)) throw std::runtime_error("Lockcheck on <" + targetName + ">: valid inputs are read, write, or both. None is not permitted.");  
+
+  uint32_t hash       = hm.lookup(targetName, "queueLock: unknown target ");
+  auto it             = atDown.lookupHash(hash, carpeDMcommand::exIntro);
+  auto* x             = (AllocMeta*)&(*it);
+  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
+  uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
+  uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
+  uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
+  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
+  
+  //save lock state bits for others to use later
+  bool wrLockState = (qFlags >> BLOCK_CMDQ_DNW_POS) & 1;
+  bool rdLockState = (qFlags >> BLOCK_CMDQ_DNR_POS) & 1;
+
+  //check if any of the requested lock bits is not present. If so, return false.
+  return ( ((rdLockState && checkReadLock) || !checkReadLock) && ((wrLockState && checkWriteLock) || !checkWriteLock) );
+
+}
+
+bool CarpeDM::blockIsLockActive(const std::string& targetName, bool checkReadLock, bool checkWriteLock) {
   if (!(checkReadLock & checkWriteLock)) throw std::runtime_error("Lockcheck on <" + targetName + ">: valid inputs are read, write, or both. None is not permitted.");  
 
   uint32_t hash       = hm.lookup(targetName, "queueLock: unknown target ");
@@ -106,9 +181,12 @@ bool CarpeDM::blockIsLocked(const std::string& targetName, bool checkReadLock, b
   uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
   uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
   
-  //check if all requested lock bits are present
-  if(!((qFlags & ((uint32_t)checkReadLock << BLOCK_CMDQ_DNR_POS))
-    && (qFlags & ((uint32_t)checkWriteLock << BLOCK_CMDQ_DNW_POS)))) {return false;}
+  //save lock state bits for others to use later
+  bool wrLockState = (qFlags >> BLOCK_CMDQ_DNW_POS) & 1;
+  bool rdLockState = (qFlags >> BLOCK_CMDQ_DNR_POS) & 1;
+
+  //check if any of the requested lock bits is not present. If so, return false.
+  if( !(((rdLockState && checkReadLock) || !checkReadLock) && ((wrLockState && checkWriteLock) || !checkWriteLock)) ) return false;
 
   //confirm spin lock
   //cumbersome version for now
@@ -196,7 +274,7 @@ void CarpeDM::adjustValidTime(uint64_t& tValid, bool abs) {
 }
 
 
-vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
+vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
 
 
   mc_ptr mc;
@@ -240,7 +318,9 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
     if(verbose) sLog << "Command <" << g[v].name << ">, type <" << g[v].type << ">" << std::endl;
 
 
-    // Commands with optional target
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Global Commands (not targeted at cmd queues of individual blocks)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (g[v].type == dnt::sCmdStart)   {
       if(parseCpuAndThr(v, g)) {
@@ -284,48 +364,89 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
       continue;
     }
 
-    // Commands targeted at cmd queue of individual blocks, using miniCommand (mc) class
-         if (g[v].type == dnt::sCmdNoop)  { uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
-                                            mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
-                                          }
-    else if (g[v].type == dnt::sCmdFlow)  { uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
-                                            //sLog << " Flowing from <" << target << "> to <" << destination << ">, permanent defDest change='" << s2u<bool>(g[v].perma) << "'" << std::endl;
-                                            uint32_t adr = LM32_NULL_PTR;
-                                            try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
-                                              throw std::runtime_error("Destination '" + destination + "'' invalid: " + std::string(err.what()));
-                                            }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Local Commands (targeted at cmd queue of individual blocks)
+    // These operations need at least a write lock. Add it to the lock manager
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                                            mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, s2u<bool>(g[v].perma) );
-                                          }
-    else if (g[v].type == dnt::sCmdFlush) { // << " Flushing <" << target << "> Queues IL " << s2u<int>(g[v].qIl) << " HI " << s2u<int>(g[v].qHi) << " LO " << s2u<int>(g[v].qLo) <<  std::endl;
-                                            uint32_t adr = LM32_NULL_PTR;
-                                            try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
-                                              // empty tag or invalid destination. We'll interpret this as no override desired.
-                                              adr = LM32_NULL_PTR;
-                                            }
-                                            mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, s2u<bool>(g[v].qIl), s2u<bool>(g[v].qHi), s2u<bool>(g[v].qLo), adr, s2u<bool>(g[v].perma));
-                                          }
-    else if (g[v].type == dnt::sCmdWait)  { uint64_t cmdTwait  = s2u<uint64_t>(g[v].tWait);
-                                            mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, cmdTwait, false, false );
-                                          }
-    else                                  { throw std::runtime_error("Command <" + g[v].name + ">'s type <" + g[v].type + "> is not supported!\n");}
+    BlockLock& lock = lm.add(target);
+
+    // lock all queues
+    if (g[v].type == dnt::sCmdLock) {
+      lock.wr.set(true);
+      lock.rd.set(true);  
+
+    // async clear all queues
+    } else if (g[v].type == dnt::sCmdAsyncClear) {
+      mc = (mc_ptr) new MiniClear();
+      lock.wr.set(true);
+      lock.wr.clr(true);
+      lock.rd.set(true);
+      lock.rd.clr(true);    
+      
+    // unlock all queues
+    } else if (g[v].type == dnt::sCmdUnlock) {
+      lock.wr.clr(true);
+      lock.rd.clr(true); 
+
+    // Commands targeted at cmd queue of individual blocks
+    } else if (g[v].type == dnt::sCmdNoop) {
+      uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
+      mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
+      lock.wr.set(true);
+      lock.wr.clr(true);
+
+    } else if (g[v].type == dnt::sCmdFlow) {
+      uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
+      //sLog << " Flowing from <" << target << "> to <" << destination << ">, permanent defDest change='" << s2u<bool>(g[v].perma) << "'" << std::endl;
+      uint32_t adr = LM32_NULL_PTR;
+      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
+        throw std::runtime_error("Destination '" + destination + "'' invalid: " + std::string(err.what()));
+      }
+  
+      mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, s2u<bool>(g[v].perma) );
+      lock.wr.set(true);
+      lock.wr.clr(true);
+
+    } else if (g[v].type == dnt::sCmdFlush) { // << " Flushing <" << target << "> Queues IL " << s2u<int>(g[v].qIl) << " HI " << s2u<int>(g[v].qHi) << " LO " << s2u<int>(g[v].qLo) <<  std::endl;
+      uint32_t adr = LM32_NULL_PTR;
+      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
+        // empty tag or invalid destination. We'll interpret this as no override desired.
+        adr = LM32_NULL_PTR;
+      }
+      mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, s2u<bool>(g[v].qIl), s2u<bool>(g[v].qHi), s2u<bool>(g[v].qLo), adr, s2u<bool>(g[v].perma));
+      lock.wr.set(true);
+      lock.wr.clr(true); 
+
+    } else if (g[v].type == dnt::sCmdWait) {  
+      uint64_t cmdTwait  = s2u<uint64_t>(g[v].tWait);
+      mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, cmdTwait, false, false );
+      lock.wr.set(true);
+      lock.wr.clr(true);                                            
+    }
+    else { throw std::runtime_error("Command <" + g[v].name + ">'s type <" + g[v].type + "> is not supported!\n");}
 
     //sLog << std::endl;
-    //create miniCommand
     createCommand(target, cmdPrio, mc, ew);
 
+
   }
-
-
-
-
 
   return ew;
 
 }
 
   int CarpeDM::send(vEbwrs& ew) {
-    ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs);
+    bool locksRdy;
+    lm.initLockValues(); //read current lock states
+    lm.processLockRequests(); //set requested locks (or'ed with already set locks)
+    locksRdy = lm.isReady();
+    
+    if(locksRdy) ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
+    
+    lm.processUnlockRequests(); //restore lock bits
+    if (!locksRdy) throw std::runtime_error("Could not write commands, locking failed");
+
     return ew.vb.size();
   }
 
