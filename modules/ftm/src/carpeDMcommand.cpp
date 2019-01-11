@@ -28,209 +28,39 @@ namespace carpeDMcommand {
   const std::string exIntro = "carpeDMcommand: ";
 }
 
-void CarpeDM::blockLock(const std::string& targetName, bool readLock, bool writeLock) {
-
-    uint32_t hash;
-    const uint32_t flagsToAdd = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
-
-    //check for covenants
-    if(optimisedS2R) {
-      cmI x = ct.lookup(targetName);
-      if (ct.isOk(x) && isCovenantPending(x)) {
-        throw std::runtime_error("Locking block <" + targetName + "> for modification would violate a safe2remove-covenant!");
-      }
-
-    }
-    hash     = hm.lookup(targetName, "queueLock: unknown target ");
-    auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-    auto* x = (AllocMeta*)&(*it);
-    uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
-    uint32_t adrQFlags   = adrBase + BLOCK_CMDQ_FLAGS;
-    uint32_t flags = (ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK);
-
-    //sLog << "adr 0x" << std::hex <<  adrQFlags << " flags 0x" << flags << " newflags 0x" << (flags | flagsToAdd) << std::endl;
-    //add lock bits to flags
-    ebWriteWord(ebd, adrQFlags, flags | flagsToAdd);
-   
-    
-}
-
-vEbwrs& ew CarpeDM::blockLock(const Lock& , vEbwrs& ew) {
-
-    uint32_t hash;
-    const uint32_t flagsToAdd = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
-
-    //check for covenants
-    if(optimisedS2R) {
-      cmI x = ct.lookup(targetName);
-      if (ct.isOk(x) && isCovenantPending(x)) {
-        throw std::runtime_error("Locking block <" + targetName + "> for modification would violate a safe2remove-covenant!");
-      }
-
-    }
-    hash     = hm.lookup(targetName, "queueLock: unknown target ");
-    auto it = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-    auto* x = (AllocMeta*)&(*it);
-    uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
-    uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
-
-   
-   
-    
-}
-
-void CarpeDM::blockAsyncFlushQueues(const std::string& targetName, bool autoLock, bool autoUnlock, bool prioIl, bool prioHi, bool prioLo) {
-  //check if locked
-  if(autoLock) blockLock(targetName);
-  if (!blockIsLocked(targetName, true, true)) throw std::runtime_error("No async flush of block <" + targetName + ">'s queues possible, block is not locked.");
-
+vEbwrs& CarpeDM::blockAsyncClearQueues(const std::string& sBlock, vEbwrs& ew) {
   uint32_t hash;
-  hash      = hm.lookup(targetName, "blockLock: unknown target ");
-  auto it   = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-  auto* x   = (AllocMeta*)&(*it);
-  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
-  uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
-  uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
-  //copy read indices of requested priorities to write indices, clearing queues
-  const uint32_t cpyMsk =  ~(((uint8_t)(prioIl-1) << (PRIO_IL * 8)) 
-                           | ((uint8_t)(prioHi-1) << (PRIO_HI * 8))
-                           | ((uint8_t)(prioLo-1) << (PRIO_LO * 8)));
-
-
-  uint32_t eRdIdxs = ebReadWord(ebd, adrRdIdxs) & BLOCK_CMDQ_RD_IDXS_SMSK;
-  uint32_t eWrIdxs = ebReadWord(ebd, adrWrIdxs) & BLOCK_CMDQ_WR_IDXS_SMSK;
-  uint32_t newWrIdxs = (eWrIdxs & ~cpyMsk) | (eRdIdxs & cpyMsk);
-  //sLog << "cpyMsk 0x" << std::hex << cpyMsk << " rd 0x" << (eRdIdxs & cpyMsk) <<  " wr 0x" <<  (eWrIdxs & ~cpyMsk) << "new 0x " << newWrIdxs << std::endl;
-  ebWriteWord(ebd, adrWrIdxs, newWrIdxs);
-  if(autoUnlock) blockUnlock(targetName);
-
-}
-
-vEbwrs& ew CarpeDM::blockAsyncClearQueues(const std::string& targetName, vEbwrs& ew) {
-  uint32_t hash;
-  hash      = hm.lookup(targetName, "block: unknown target ");
+  hash      = hm.lookup(sBlock, "block: unknown target ");
   auto it   = atDown.lookupHash(hash, carpeDMcommand::exIntro);
   auto* x   = (AllocMeta*)&(*it);
   uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
   //reset read and write indices
-  ew.va += (adrBase + BLOCK_CMDQ_RD_IDXS);
-  ew.va += (adrBase + BLOCK_CMDQ_WR_IDXS);
-
-
-
-}
-
-vEbwrs& ew CarpeDM::blockUnlock(const Lock& lock, vEbwrs& ew ) {
-
-  const uint32_t flagsToRem = ((uint32_t)lock.rdClr << BLOCK_CMDQ_DNR_POS) | ((uint32_t)lock.wrClr << BLOCK_CMDQ_DNW_POS);
-  uint32_t hash = hm.lookup(targetName, "blockUnlock: unknown target ");
-  auto it  = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-  auto* x  = (AllocMeta*)&(*it);
-  uint32_t adrQFlags  = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_FLAGS;
-  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
-  uint32_t newQFlags  = qFlags & ~(flagsToRem);
-  
-
-}
-
-void CarpeDM::blockUnlock(const std::string& targetName, bool readLock, bool writeLock) {
-  const uint32_t flagsToRem = ((uint32_t)readLock << BLOCK_CMDQ_DNR_POS) | ((uint32_t)writeLock << BLOCK_CMDQ_DNW_POS);
-  uint32_t hash = hm.lookup(targetName, "blockUnlock: unknown target ");
-  auto it  = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-  auto* x  = (AllocMeta*)&(*it);
-  uint32_t adrQFlags  = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr) + BLOCK_CMDQ_FLAGS;
-  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
-  uint32_t newQFlags  = qFlags & ~(flagsToRem);
-  ebWriteWord(ebd, adrQFlags, newQFlags);
-
-}
-
-
-
-bool CarpeDM::blockIsLocked(const std::string& targetName, bool checkReadLock, bool checkWriteLock) 
-{
-    if (!(checkReadLock & checkWriteLock)) throw std::runtime_error("Lockcheck on <" + targetName + ">: valid inputs are read, write, or both. None is not permitted.");  
-
-  uint32_t hash       = hm.lookup(targetName, "queueLock: unknown target ");
-  auto it             = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-  auto* x             = (AllocMeta*)&(*it);
-  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
-  uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
-  uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
-  uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
-  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
-  
-  //save lock state bits for others to use later
-  bool wrLockState = (qFlags >> BLOCK_CMDQ_DNW_POS) & 1;
-  bool rdLockState = (qFlags >> BLOCK_CMDQ_DNR_POS) & 1;
-
-  //check if any of the requested lock bits is not present. If so, return false.
-  return ( ((rdLockState && checkReadLock) || !checkReadLock) && ((wrLockState && checkWriteLock) || !checkWriteLock) );
-
-}
-
-bool CarpeDM::blockIsLockActive(const std::string& targetName, bool checkReadLock, bool checkWriteLock) {
-  if (!(checkReadLock & checkWriteLock)) throw std::runtime_error("Lockcheck on <" + targetName + ">: valid inputs are read, write, or both. None is not permitted.");  
-
-  uint32_t hash       = hm.lookup(targetName, "queueLock: unknown target ");
-  auto it             = atDown.lookupHash(hash, carpeDMcommand::exIntro);
-  auto* x             = (AllocMeta*)&(*it);
-  uint32_t adrBase    = atDown.adrConv(AdrType::MGMT, AdrType::EXT, x->cpu, x->adr);
-  uint32_t adrWrIdxs  = adrBase + BLOCK_CMDQ_WR_IDXS;
-  uint32_t adrRdIdxs  = adrBase + BLOCK_CMDQ_RD_IDXS;
-  uint32_t adrQFlags  = adrBase + BLOCK_CMDQ_FLAGS;
-  uint32_t qFlags     = ebReadWord(ebd, adrQFlags) & BLOCK_CMDQ_FLGS_SMSK;
-  
-  //save lock state bits for others to use later
-  bool wrLockState = (qFlags >> BLOCK_CMDQ_DNW_POS) & 1;
-  bool rdLockState = (qFlags >> BLOCK_CMDQ_DNR_POS) & 1;
-
-  //check if any of the requested lock bits is not present. If so, return false.
-  if( !(((rdLockState && checkReadLock) || !checkReadLock) && ((wrLockState && checkWriteLock) || !checkWriteLock)) ) return false;
-
-  //confirm spin lock
-  //cumbersome version for now
-  uint32_t oldRdIdxs, newRdIdxs = -1; // set out of range initial value on purpose so initial comp. fails
-  uint32_t oldWrIdxs, newWrIdxs = -1; // ""
-  uint32_t attempts = 0, maxAttempts = 10;
-
-  bool spin = true;
-  // spin lock. check indices of attempted locks until no more changes are detected 
-  while(spin) {
-    if (attempts == maxAttempts) return false;
-    //sleep 0.001;
-    spin = false;
-    // check read indices if read lock is active
-    if(qFlags & ((uint32_t)checkReadLock << BLOCK_CMDQ_DNR_POS)) {  
-      oldRdIdxs = newRdIdxs; //save RdIdxs
-      newRdIdxs = ebReadWord(ebd, adrRdIdxs);
-      spin |= (oldRdIdxs != newRdIdxs);
-    }
-    // check write indices if wr lock is active
-    if(qFlags & ((uint32_t)checkWriteLock << BLOCK_CMDQ_DNW_POS)) {  
-      oldWrIdxs = newWrIdxs; //save WrIdxs
-      newWrIdxs = ebReadWord(ebd, adrWrIdxs);
-      spin |= (oldWrIdxs != newWrIdxs);
-    }
-    attempts++;
-  }
-
-  return true;
+  vAdr tmp = {(adrBase + BLOCK_CMDQ_RD_IDXS), (adrBase + BLOCK_CMDQ_WR_IDXS)};
+  ew.va += tmp;
+  ew.vb += {0, 0};
+  ew.vcs += leadingOne(tmp.size());
+  return ew;
 }
 
 vStrC CarpeDM::getLockedBlocks(bool checkReadLock, bool checkWriteLock) {
   vStrC ret;
   if (!(checkReadLock & checkWriteLock)) throw std::runtime_error("Get locked Blocks: valid inputs are read, write, or both. None is not permitted.");  
 
+
+  lm.clear(); //clear lock manager for inspection
+
   //get a list of all blocks
   BOOST_FOREACH( vertex_t vChkBlock, vertices(gDown) ) {
-    //check if block is locked
-    if(gDown[vChkBlock].np->isBlock()) {
-      //take a detour here over the name, but this should be changed to work just with the node index
-      if(blockIsLocked(gDown[vChkBlock].name, checkReadLock, checkWriteLock)) ret.push_back(gDown[vChkBlock].name);
+    //setup check if this block has a lock we're interested in
+    if(gDown[vChkBlock].np->isBlock()) { 
+      BlockLock& lock = lm.add(gDown[vChkBlock].name);
+      lock.rd.set = checkReadLock;
+      lock.wr.set = checkWriteLock;
     }
   }
-
+  lm.readInStat(); // read in the lock status flags from DM
+  for (const auto& l : lm.getLockVec()) { if (l.isAnySet()) ret.push_back(l.name); }; //
+  
   return ret;
 }
 
@@ -274,7 +104,7 @@ void CarpeDM::adjustValidTime(uint64_t& tValid, bool abs) {
 }
 
 
-vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
+vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 
 
   mc_ptr mc;
@@ -371,14 +201,14 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
 
     BlockLock& lock = lm.add(target);
 
-    // lock all queues
+    // lock all queues of a block
     if (g[v].type == dnt::sCmdLock) {
       lock.wr.set(true);
       lock.rd.set(true);  
 
     // async clear all queues
     } else if (g[v].type == dnt::sCmdAsyncClear) {
-      mc = (mc_ptr) new MiniClear();
+      blockAsyncClearQueues(target, ew);
       lock.wr.set(true);
       lock.wr.clr(true);
       lock.rd.set(true);
@@ -428,8 +258,6 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
 
     //sLog << std::endl;
     createCommand(target, cmdPrio, mc, ew);
-
-
   }
 
   return ew;
@@ -440,9 +268,17 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
     bool locksRdy;
     lm.initLockValues(); //read current lock states
     lm.processLockRequests(); //set requested locks (or'ed with already set locks)
-    locksRdy = lm.isReady();
     
-    if(locksRdy) ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
+    //3 retries for lock readiness
+    for(unsigned i = 0; i < 3; i++) {
+      locksRdy = lm.isReady();
+      if (locksRdy) {
+        ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
+        break;
+      }
+      std::chrono::milliseconds timespan(1);
+      std::this_thread::sleep_for(timespan);  
+    }
     
     lm.processUnlockRequests(); //restore lock bits
     if (!locksRdy) throw std::runtime_error("Could not write commands, locking failed");
@@ -463,7 +299,6 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew, vLock& lockRequests) {
         //there is covenant. lets see if we are a danger to it
         if(x->prio < cmdPrio) throw std::runtime_error("Command preemption (prio " + std::to_string((int)cmdPrio) + ") at block <" + targetName + "> would violate a safe2remove-covenant!");
       }
-
     }
 
     hash     = hm.lookup(targetName, "createCommand: unknown target ");

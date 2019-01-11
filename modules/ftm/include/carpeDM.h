@@ -20,6 +20,7 @@
 #include "grouptable.h"
 #include "covenanttable.h"
 #include "validation.h"
+#include "lockmanager.h"
 
 
 
@@ -32,18 +33,14 @@ using namespace etherbone;
 class CarpeDM {
 
 private:
-  std::string ebdevname;
+
   std::string outputfilename;
   std::string inputfilename;
 
   std::vector<int> vFw;
   std::map<uint8_t, uint8_t> cpuIdxMap;
 
-  Socket ebs;
-  Device ebd;
-  std::vector<struct sdb_device> cpuDevs;
-  std::vector<struct sdb_device> cluTimeDevs;
-  std::vector<struct sdb_device> diagDevs;
+
 
   int cpuQty = -1;
   HashMap hm;
@@ -53,9 +50,8 @@ private:
   Graph gUp;
   AllocTable atDown;
   Graph gDown;
+  LockManager lm = LockManager(ebd, sim, hm, ct, atDown); //get us an instance of the lock manager
 
-  std::vector<uint32_t *> simRam;
-  std::map<uint8_t, uint32_t> simRamAdrMap;
 
   uint64_t modTime;
   bool freshDownload = false;
@@ -68,13 +64,7 @@ private:
   std::ostream& sLog;
   std::ostream& sErr;
 
-  bool simConnect();
-  bool simDisconnect();
-  void simAdrTranslation (uint32_t a, uint8_t& cpu, uint32_t& arIdx);
-  void simRamWrite (uint32_t a, eb_data_t d);
-  void simRamRead (uint32_t a, eb_data_t* d);
-  int  simWriteCycle(vAdr va, vBuf& vb);
-  vBuf simReadCycle(vAdr va);
+
 
   void updateListDstStaging(vertex_t v);
   void updateStaging(vertex_t v, edge_t e);
@@ -191,19 +181,12 @@ private:
 
 
 
-  int   ebWriteCycle(Device& dev, vAdr va, vBuf& vb, vBl vcs);
-  int   ebWriteCycle(Device& dev, vAdr va, vBuf& vb);
-  vBuf  ebReadCycle(Device& dev, vAdr va, vBl vcs);
-  vBuf  ebReadCycle(Device& dev, vAdr va);
-  int   ebWriteWord(Device& dev, uint32_t adr, uint32_t data);
-  uint32_t ebReadWord(Device& dev, uint32_t adr);
+
   boost::dynamic_properties createParser(Graph& g);
 
   //std::string getFwInfo(uint8_t cpuIdx);
   int parseFwVersionString(const std::string& s);
   const std::string createFwVersionString(const int fwVer);
-  uint64_t read64b(uint32_t startAdr);
-  int write64b(uint32_t startAdr, uint64_t d);
 
   Graph& getUpGraph(); //Returns the Upload Graph for CPU <cpuIdx>
 
@@ -296,12 +279,7 @@ public:
                 int clear(bool force);                              // clears all nodes from DM
 
 // Command Generation and Dispatch ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-               //Block Queue Locking and Asynchronous clear
-               void blockLock(const std::string& targetName, bool readLock=true, bool writeLock=true);
-               void blockAsyncFlushQueues(const std::string& targetName, bool autoLock=false, bool autoUnlock=false, bool prioIl=false, bool prioHi=false, bool prioLo=false);
-               void blockAsyncFlushAllQueues(const std::string& targetName, bool autoLock=false, bool autoUnlock=false) { blockAsyncFlushQueues(targetName, autoLock, autoUnlock, true, true, true); }
-               void blockUnlock(const std::string& targetName, bool readLock=true, bool writeLock=true);
-               bool blockIsLocked(const std::string& targetName, bool checkReadLock=true, bool checkWriteLock=true);
+            vEbwrs& blockAsyncClearQueues(const std::string& sBlock, vEbwrs& ew);
               vStrC getLockedBlocks(bool checkReadLock, bool checkWriteLock);
                 int sendCommandsDot(const std::string& s); //Sends a dotfile of commands to the DM
                 int sendCommandsDotFile(const std::string& fn);

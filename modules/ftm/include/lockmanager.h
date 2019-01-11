@@ -32,42 +32,33 @@
 class LockManager {
 private:
   etherbone::Device& ebd;
-  std::vector<BlockLock> vBL;
-  bool sim;
+  std::vector<BlockLock> vBl;
+  const bool& sim;
+  HashMap& hm;
   CovenantTable& ct;
   AllocTable& at;
 
-  uint32_t getNodeAdr(const std:string& name);
-  bool hasCovenant(const std:string& name);
+  uint32_t getBaseAdr(const std::string& name);
+  bool hasCovenant(const std::string& name);
 
-  };
 
 public:
 
-  LockManager(etherbone::Device& ebd, bool simulation=false, HashMap& hm, CovenantTable& ct, AllocTable& at) : ebd(ebd), sim(simulation), hm(hm), ct(ct), at(at) {};
+  LockManager(etherbone::Device& ebd, const bool& simulation, HashMap& hm, CovenantTable& ct, AllocTable& at) : ebd(ebd), sim(simulation), hm(hm), ct(ct), at(at) {};
   ~LockManager(){};
 
-  BlockLock& add(const std:string& name) {
-    if(hasCovenant(name)) throw std::runtime_error("Locking block <" + name + "> would violate a safe2remove-covenant!");
-    vBl.push_back(BlockLock(name, getNodeAdr(name)));
-    return vBL.back();
-  }
-  BlockLock& add(const std:string& name, bool setDNR, bool clrDNR, bool setDNW, bool clrDNW) {
-    if(hasCovenant(name)) throw std::runtime_error("Locking block <" + name + "> would violate a safe2remove-covenant!");
-    vBl.push_back(BlockLock(name, getNodeAdr(name), setDNR, clrDNR, setDNW, clrDNW));
-    return vBL.back();
-  }
+  const std::vector<BlockLock>& getLockVec() {return vBl;}
+
+
+  BlockLock& add(const std::string& name);
+  //BlockLock& add(const std::string& name, bool setDNR, bool clrDNR, bool setDNW, bool clrDNW);
   //not necessary to remove individuals
   void processLockRequests();
   void processUnlockRequests();
-  void initStatValues() {
-
-  }
+  void readInStat();
   bool isReady();
- 
-  
+  void clear() {vBl.clear();};
 
-  void clear() {vBL.clear(); };
 
 };  
 

@@ -156,8 +156,6 @@ typedef struct {
 } HwDelayReport;
 
 
-
-
 typedef struct {
   uint32_t     extAdr = LM32_NULL_PTR;
   bool       orphaned = false;
@@ -234,6 +232,16 @@ std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B)
 }
 
 template <typename T>
+std::vector<T> operator+(const std::vector<T> &A, const T &B)
+{
+    std::vector<T> AB = A;
+    AB.reserve( A.size() + 1 );                // preallocate memory
+    AB.insert( AB.end(), A.begin(), A.end() );
+    AB.push_back(B);
+    return AB;
+}
+
+template <typename T>
 std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B)
 {
     A.reserve( A.size() + B.size() );                // preallocate memory without erase original data
@@ -241,12 +249,32 @@ std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B)
     return A;                                        // here A could be named AB
 }
 
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &A, const T &B)
+{
+    A.push_back(B);
+    return A;
+}
+
+//TODO oh for fucks sake, implement a version of writeLeNumberToBeBytes that writes to a vBuf !!!
 template<typename T>
 inline void writeLeNumberToBeBytes(uint8_t* pB, T val) {
   T x = endian_reverse(val);
   std::copy(static_cast<const uint8_t*>(static_cast<const void*>(&x)),
             static_cast<const uint8_t*>(static_cast<const void*>(&x)) + sizeof x,
             pB);
+}
+
+template<typename T>
+inline void writeLeNumberToBeBytes(vBuf& vB, T val) {
+  uint8_t b[sizeof(T)];
+
+  T x = endian_reverse(val);
+  std::copy(static_cast<const uint8_t*>(static_cast<const void*>(&x)),
+            static_cast<const uint8_t*>(static_cast<const void*>(&x)) + sizeof x,
+            b);
+
+  vB.insert( vB.end(), b, b + sizeof(T) );
 }
 
 template<typename T>
