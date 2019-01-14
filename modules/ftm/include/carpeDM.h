@@ -40,7 +40,7 @@ private:
   std::vector<int> vFw;
   std::map<uint8_t, uint8_t> cpuIdxMap;
 
-
+  std::unique_pointer<EbWrapper> pEbd;
 
   int cpuQty = -1;
   HashMap hm;
@@ -202,7 +202,7 @@ public:
   ~CarpeDM() {};
 
 // Etherbone interface
-               bool connect(const std::string& en, bool simulation=false, bool test=false); //Open connection to a DM via Etherbone
+               bool connect(const std::string& en, bool simulation=false, bool test=false) {if (pEbd == NULL) { (pEbd = new (simulation ? EbDev(en) : EbSim(en))); }} //Open connection to a DM via Etherbone
                bool disconnect(); //Close connection
                // SDB and DM HW detection Functions
                bool isValidDMCpu(uint8_t cpuIdx);              // Check if CPU is registered as running a valid firmware
@@ -334,7 +334,7 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void debugOn()  {debug = true;}                                  // Turn on Verbose Output
                void debugOff() {debug = false;}                                 // Turn off Verbose Output
                bool isDebug()  const {return debug;}                            // Tell if Output is set to Verbose
-               bool isSim()  const {return sim;}                                // Tell if this is a simulation. Cannot change while connected !!!
+               bool isSim()  const {return ebdsim;}                                // Tell if this is a simulation. Cannot change while connected !!!
                void testOn()  {testmode = true;}                                // Turn on Testmode
                void testOff() {testmode = false;}                               // Turn off Testmode
                bool isTest() const {return testmode;}                           // Tell if Testmode is on

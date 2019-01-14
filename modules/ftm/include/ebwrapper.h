@@ -1,61 +1,51 @@
+#ifndef _CARPEDM_H_
+#define _CARPEDM_H_
 
 
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include <inttypes.h>
+#include <map>
+#include "common.h"
 
 Class EbWrapper {
 
-private:
+protected:
 
   std::string ebdevname;
-  Socket ebs;
-  Device ebd;
+  
+  void readCycle (const vAdr& va, const vBl& vcs) {
+     if (va.size() != vcs.size()) throw std::runtime_error(" EB Read cycle Adr / Flow control vector lengths (" 
+      + std::to_string(va.size()) + "/" + std::to_string(vcs.size()) + ") do not match\n");
+  }
 
-
-
-
-
-  std::vector<uint32_t *> simRam;
-  std::map<uint8_t, uint32_t> simRamAdrMap;
-  std::vector<struct sdb_device> cpuDevs;
-  std::vector<struct sdb_device> cluTimeDevs;
-  std::vector<struct sdb_device> diagDevs;
-
-
-
-  bool simConnect();
-  bool simDisconnect();
-  void simAdrTranslation (uint32_t a, uint8_t& cpu, uint32_t& arIdx);
-  void simRamWrite (uint32_t a, eb_data_t d);
-  void simRamRead (uint32_t a, eb_data_t* d);
-  int  simWriteCycle(vAdr va, vBuf& vb);
-  vBuf simReadCycle(vAdr va);
-
-  bool ebConnect(const std::string& en, bool test=false); //Open connection to a DM via Etherbone
-  bool ebDisconnect(); //Close connection
-  int   ebWriteCycle(vAdr va, vBuf& vb, vBl vcs);
-  int   ebWriteCycle(vAdr va, vBuf& vb);
-  vBuf  ebReadCycle(vAdr va, vBl vcs);
-  vBuf  ebReadCycle(vAdr va);
-  int   ebWrite32b(uint32_t adr, uint32_t data);
-  uint32_t ebRead32b(uint32_t adr);
-  uint64_t ebRead64b(uint32_t startAdr);
-  int ebWrite64b(uint32_t startAdr, uint64_t data);
-
+  void writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs) {   
+    if ( (va.size() != vcs.size()) || ( va.size() * _32b_SIZE_ != vb.size() ) )
+    throw std::runtime_error(" EB/sim write cycle Adr / Data / Flow control vector lengths (" + std::to_string(va.size()) + "/" 
+      + std::to_string(vb.size() /  _32b_SIZE_) + "/" + std::to_string(vcs.size()) +") do not match\n");
+  }
 
 public:
-  //TODO any better way to do this ?
-  bool connect(const std::string& en, bool simulation=false, bool test=false);
-  bool disconnect(); //Close connection
-  int writeCycle(const ebWrs& ew);
-  int writeCycle(vAdr va, vBuf& vb, vBl vcs);
-  int writeCycle(vAdr va, vBuf& vb);
-  vBuf readCycle(const ebRds& er);
-  vBuf readCycle(vAdr va, vBl vcs);
-  vBuf readCycle(vAdr va );
-  uint32_t read32b(uint32_t adr);
-  uint64_t read64b(uint32_t startAdr);
-  int write32b(uint32_t adr, uint32_t data);
-  int write64b(uint32_t startAdr, uint64_t data);
+  EbWrapper(const std::string& ebdevname) : ebdevname(ebdevname) {}
 
+  virtual ~EbWrapper() = default;
+  virtual bool connect() = 0;
+  virtual bool disconnect()  = 0; //Close connection
+  virtual int writeCycle(const ebWrs& ew) const = 0;
+  virtual int writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs)  const = 0;
+  virtual int writeCycle(const vAdr& va, const vBuf& vb)  const = 0;
+  virtual vBuf readCycle(const ebRds& er)  const = 0;
+  virtual vBuf readCycle(const vAdr& va, const vBl& vcs) const = 0;
+  virtual vBuf readCycle(const vAdr& va ) const = 0;
+  virtual uint32_t read32b(uint32_t adr) const = 0;
+  virtual uint64_t read64b(uint32_t startAdr) const = 0;
+  virtual int write32b(uint32_t adr, uint32_t data) const = 0;
+  virtual int write64b(uint32_t startAdr, uint64_t data) const = 0;
+  virtual bool isSimulation()  const = 0;
+  virtual uint64_t getDmWrTime() const = 0;
+  virtual showCpuList() const = 0;
+  virtual void showCpuList() const = 0;
 
 
 };
