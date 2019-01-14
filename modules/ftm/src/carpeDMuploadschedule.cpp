@@ -361,7 +361,7 @@ using namespace DotStr::Misc;
     vEbwrs ew = gatherUploadVector(moddedCpus, 0, opType); //TODO not using modCnt right now, maybe implement later
     deactivateOrphanedCommands(vQr, ew);
     //Upload
-    ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs);
+    ebd.writeCycle(ew.va, ew.vb, ew.vcs);
     if(verbose) sLog << "Done." << std::endl;
     freshDownload = false;
     return ew.va.size();

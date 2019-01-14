@@ -1,3 +1,5 @@
+#include <thread>
+#include <chrono>
 #include "lockmanager.h"
 
 uint32_t LockManager::getBaseAdr(const std::string& name) {
@@ -8,7 +10,7 @@ uint32_t LockManager::getBaseAdr(const std::string& name) {
 }
 
 bool LockManager::hasCovenant(const std::string& name) {
-  cmI x = ct.lookup(name);
+  //cmI x = ct.lookup(name);
   return false; //(ct.isOk(x) && isCovenantPending(x)); FIXME: there is no way to access this function atm, its part of safe2remove. static ?
 }
 
@@ -28,31 +30,28 @@ BlockLock& LockManager::add(const std::string& name, bool setDNR, bool clrDNR, b
 void LockManager::processLockRequests() {
   vEbwrs ew;
   for (auto& l : vBl) { l.lock(ew); }
-  ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs );  
+  ebd.writeCycle(ew.va, ew.vb, ew.vcs );  
 }
 
 void LockManager::processUnlockRequests() {
   vEbwrs ew;
   for (auto& l : vBl) { l.unlock(ew); }
-  ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs );  
+  ebd.writeCycle(ew.va, ew.vb, ew.vcs );  
 }
 
 void LockManager::readInStat() {
   vEbrds er;
   for (auto& l : vBl) { l.updateStat(er);} //prepare addresses to read
-  vBuf b = ebReadCycle(ebd, er.va, er.vcs); // read stat
+  vBuf b = ebd.readCycle(er.va, er.vcs); // read stat
 
   //decode read data
   for(unsigned idx = 0; idx < vBl.size(); idx++) {
-    uint32_t flags   = writeBeBytesToLeNumber((uint8_t*)&b[idx * _32b_SIZE_]);
+    uint32_t flags   = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b[idx * _32b_SIZE_]);
     vBl[idx].wr.stat = (bool)(flags >> BLOCK_CMDQ_DNW_POS); //wr lock is set when flag bit is present
     vBl[idx].rd.stat = (bool)(flags >> BLOCK_CMDQ_DNR_POS); //rd lock is set when flag bit is present
   }
 }
 
-const std::vector<BlockLock>& LockManager::getLockVector() {
-
-}
 
 bool LockManager::isReady() {
     vEbrds erStat, erAct;
@@ -63,7 +62,7 @@ bool LockManager::isReady() {
       
     // read stat and first pass act
     vEbrds er = erStat + erAct;
-    vBuf b0 = ebReadCycle(ebd, er.va, er.vcs);
+    vBuf b0 = ebd.readCycle(er.va, er.vcs);
     vBuf bStat0(b0.begin(), b0.begin() + vBl.size());
     vBuf bAct0(b0.begin() + vBl.size(), b0.end());
 
@@ -74,17 +73,17 @@ bool LockManager::isReady() {
     std::this_thread::sleep_for(timespan);
    
     // read second pass act
-    vBuf bAct1 = ebReadCycle(ebd, erAct.va, erAct.vcs);
+    vBuf bAct1 = ebd.readCycle(erAct.va, erAct.vcs);
 
     //decode read data
     for(unsigned idx = 0; idx < vBl.size(); idx++) {
-      uint32_t flags  = writeBeBytesToLeNumber((uint8_t*)&bStat0[idx * _32b_SIZE_]);
+      uint32_t flags  = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bStat0[idx * _32b_SIZE_]);
       
-      uint32_t wrIdx0 = writeBeBytesToLeNumber((uint8_t*)&bAct0[(idx * 2 + 0) * _32b_SIZE_]);
-      uint32_t rdIdx0 = writeBeBytesToLeNumber((uint8_t*)&bAct0[(idx * 2 + 1) * _32b_SIZE_]);
+      uint32_t wrIdx0 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct0[(idx * 2 + 0) * _32b_SIZE_]);
+      uint32_t rdIdx0 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct0[(idx * 2 + 1) * _32b_SIZE_]);
 
-      uint32_t wrIdx1 = writeBeBytesToLeNumber((uint8_t*)&bAct1[(idx * 2 + 0) * _32b_SIZE_]);
-      uint32_t rdIdx1 = writeBeBytesToLeNumber((uint8_t*)&bAct1[(idx * 2 + 1) * _32b_SIZE_]);
+      uint32_t wrIdx1 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct1[(idx * 2 + 0) * _32b_SIZE_]);
+      uint32_t rdIdx1 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct1[(idx * 2 + 1) * _32b_SIZE_]);
 
       vBl[idx].wr.stat = (bool)(flags >> BLOCK_CMDQ_DNW_POS); //wr lock is set when flag bit is present
       vBl[idx].wr.act  = wrIdx0 == wrIdx1;                    //wr lock is active when no index diff was detected

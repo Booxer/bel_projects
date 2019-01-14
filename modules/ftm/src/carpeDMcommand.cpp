@@ -7,6 +7,8 @@
 #include <boost/graph/graphviz.hpp>
 #include <boost/graph/copy.hpp>
 #include <boost/algorithm/string.hpp>
+#include <thread>
+#include <chrono>
 
 #include "common.h"
 
@@ -203,28 +205,28 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 
     // lock all queues of a block
     if (g[v].type == dnt::sCmdLock) {
-      lock.wr.set(true);
-      lock.rd.set(true);  
+      lock.wr.set = true;
+      lock.rd.set = true;  
 
     // async clear all queues
     } else if (g[v].type == dnt::sCmdAsyncClear) {
       blockAsyncClearQueues(target, ew);
-      lock.wr.set(true);
-      lock.wr.clr(true);
-      lock.rd.set(true);
-      lock.rd.clr(true);    
+      lock.wr.set = true;
+      lock.wr.clr = true;
+      lock.rd.set = true;
+      lock.rd.clr = true;    
       
     // unlock all queues
     } else if (g[v].type == dnt::sCmdUnlock) {
-      lock.wr.clr(true);
-      lock.rd.clr(true); 
+      lock.wr.clr = true;
+      lock.rd.clr = true; 
 
     // Commands targeted at cmd queue of individual blocks
     } else if (g[v].type == dnt::sCmdNoop) {
       uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
       mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
-      lock.wr.set(true);
-      lock.wr.clr(true);
+      lock.wr.set = true;
+      lock.wr.clr = true;
 
     } else if (g[v].type == dnt::sCmdFlow) {
       uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
@@ -235,8 +237,8 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
       }
   
       mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, s2u<bool>(g[v].perma) );
-      lock.wr.set(true);
-      lock.wr.clr(true);
+      lock.wr.set = true;
+      lock.wr.clr = true;
 
     } else if (g[v].type == dnt::sCmdFlush) { // << " Flushing <" << target << "> Queues IL " << s2u<int>(g[v].qIl) << " HI " << s2u<int>(g[v].qHi) << " LO " << s2u<int>(g[v].qLo) <<  std::endl;
       uint32_t adr = LM32_NULL_PTR;
@@ -245,14 +247,14 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
         adr = LM32_NULL_PTR;
       }
       mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, s2u<bool>(g[v].qIl), s2u<bool>(g[v].qHi), s2u<bool>(g[v].qLo), adr, s2u<bool>(g[v].perma));
-      lock.wr.set(true);
-      lock.wr.clr(true); 
+      lock.wr.set = true;
+      lock.wr.clr = true; 
 
     } else if (g[v].type == dnt::sCmdWait) {  
       uint64_t cmdTwait  = s2u<uint64_t>(g[v].tWait);
       mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, cmdTwait, false, false );
-      lock.wr.set(true);
-      lock.wr.clr(true);                                            
+      lock.wr.set = true;
+      lock.wr.clr = true;                                            
     }
     else { throw std::runtime_error("Command <" + g[v].name + ">'s type <" + g[v].type + "> is not supported!\n");}
 
@@ -266,14 +268,14 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 
   int CarpeDM::send(vEbwrs& ew) {
     bool locksRdy;
-    lm.initLockValues(); //read current lock states
+    lm.readInStat(); //read current lock states
     lm.processLockRequests(); //set requested locks (or'ed with already set locks)
     
     //3 retries for lock readiness
     for(unsigned i = 0; i < 3; i++) {
       locksRdy = lm.isReady();
       if (locksRdy) {
-        ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
+        ebd.writeCycle(ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
         break;
       }
       std::chrono::milliseconds timespan(1);
@@ -354,7 +356,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
   const std::string CarpeDM::getThrOrigin(uint8_t cpuIdx, uint8_t thrIdx) {
     uint32_t adr;
 
-    adr = ebReadWord(ebd, getThrInitialNodeAdr(cpuIdx, thrIdx));
+    adr = ebd.read32b( getThrInitialNodeAdr(cpuIdx, thrIdx));
 
     if (adr == LM32_NULL_PTR) return DotStr::Node::Special::sIdle;
     try {
@@ -370,7 +372,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
   const std::string CarpeDM::getThrCursor(uint8_t cpuIdx, uint8_t thrIdx) {
     uint32_t adr;
 
-    adr = ebReadWord(ebd, getThrCurrentNodeAdr(cpuIdx, thrIdx));
+    adr = ebd.read32b( getThrCurrentNodeAdr(cpuIdx, thrIdx));
 
     //std::cout << "#" << (int) cpuIdx << ", " << (int)thrIdx << std::hex << " 0x" << adr << std::endl;
 
@@ -385,18 +387,18 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 
   //DEBUG ONLY !!! force thread cursor to the value of the corresponding origin
   void CarpeDM::forceThrCursor(uint8_t cpuIdx, uint8_t thrIdx) {
-    uint32_t cursor = ebReadWord(ebd, getThrInitialNodeAdr(cpuIdx, thrIdx));
-    ebWriteWord(ebd, getThrCurrentNodeAdr(cpuIdx, thrIdx), cursor);
+    uint32_t cursor = ebd.read32b( getThrInitialNodeAdr(cpuIdx, thrIdx));
+    ebd.write32b(getThrCurrentNodeAdr(cpuIdx, thrIdx), cursor);
   }
 
   //Get bitfield showing running threads
   uint32_t CarpeDM::getThrRun(uint8_t cpuIdx) {
-    return ebReadWord(ebd, getThrCmdAdr(cpuIdx) + T_TC_RUNNING);
+    return ebd.read32b( getThrCmdAdr(cpuIdx) + T_TC_RUNNING);
   }
 
   //Get bifield showing running threads
   uint32_t CarpeDM::getStatus(uint8_t cpuIdx) {
-    return ebReadWord(ebd, atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_STATUS);
+    return ebd.read32b( atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_STATUS);
   }
 
   //Requests Threads to start
@@ -412,7 +414,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
   }
 
   uint32_t CarpeDM::getThrStart(uint8_t cpuIdx) {
-    return ebReadWord(ebd, getThrCmdAdr(cpuIdx) + T_TC_START);
+    return ebd.read32b( getThrCmdAdr(cpuIdx) + T_TC_START);
   }
 
 
@@ -445,7 +447,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
       createCmdModInfo(cpuIdx, 0, OP_TYPE_CMD_HALT, ew);
     }
 
-    ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs);
+    ebd.writeCycle(ew.va, ew.vb, ew.vcs);
   }
 
 
@@ -474,7 +476,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 void  CarpeDM::resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx) {
   vEbwrs ew;
   resetThrMsgCnt(cpuIdx, thrIdx, ew);
-  ebWriteCycle(ebd, ew.va, ew.vb, ew.vcs);
+  ebd.writeCycle(ew.va, ew.vb, ew.vcs);
 }
 
 vEbwrs& CarpeDM::resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew) {
@@ -490,31 +492,31 @@ vEbwrs& CarpeDM::resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew) {
 }
 
 uint64_t CarpeDM::getThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx) {
-  return read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_DAT + thrIdx * _T_TD_SIZE_ + T_TD_MSG_CNT);
+  return ebd.read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_DAT + thrIdx * _T_TD_SIZE_ + T_TD_MSG_CNT);
 }
 
 uint64_t CarpeDM::getThrDeadline(uint8_t cpuIdx, uint8_t thrIdx) {
-  return read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_DAT + thrIdx * _T_TD_SIZE_ + T_TD_DEADLINE);
+  return ebd.read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_DAT + thrIdx * _T_TD_SIZE_ + T_TD_DEADLINE);
 }
 
 //FIXME wtf ... this doesnt queue anything!
 vEbwrs&  CarpeDM::setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew) {
-  write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME, t);
+  ebd.write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME, t);
   return ew;
 }
 
 uint64_t CarpeDM::getThrStartTime(uint8_t cpuIdx, uint8_t thrIdx) {
-  return read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME);
+  return ebd.read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME);
 }
 
 //FIXME wtf ... this doesnt queue anything!
 vEbwrs&  CarpeDM::setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew) {
-  write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME, t);
+  ebd.write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME, t);
   return ew;
 }
 
 uint64_t CarpeDM::getThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx) {
-  return read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME);
+  return ebd.read64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME);
 }
 
 const vAdr CarpeDM::getCmdWrAdrs(uint32_t hash, uint8_t prio) {
@@ -718,7 +720,7 @@ vertex_set_t CarpeDM::getAllCursors(bool activeOnly) {
 
   for(uint8_t cpu = 0; cpu < getCpuQty(); cpu++) { //cycle all CPUs
     for(uint8_t thr = 0; thr < _THR_QTY_; thr++) {
-      uint32_t adr = ebReadWord(ebd, getThrCurrentNodeAdr(cpu, thr));
+      uint32_t adr = ebd.read32b( getThrCurrentNodeAdr(cpu, thr));
       uint64_t  dl = getThrDeadline(cpu, thr);
       if (adr == LM32_NULL_PTR || (activeOnly && ((int64_t)dl == -1))) continue; // only active cursors: no dead end idles, no aborted threads
       try {

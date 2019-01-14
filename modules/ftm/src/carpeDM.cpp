@@ -156,126 +156,12 @@ vBuf CarpeDM::decompress(const vBuf& in) {return lzmaDecompress(in);}
     return g;
   }
 
-  const std::string CarpeDM::createFwVersionString(const int fwVer) {
-
-    unsigned int fwv = (unsigned int)fwVer;
-    std::string ret;
-
-    unsigned int verMaj = fwv / (unsigned int)FwId::VERSION_MAJOR_MUL; fwv %= (unsigned int)FwId::VERSION_MAJOR_MUL;
-    unsigned int verMin = fwv / (unsigned int)FwId::VERSION_MINOR_MUL; fwv %= (unsigned int)FwId::VERSION_MINOR_MUL;
-    unsigned int verRev = fwv;
-
-    ret = std::to_string(verMaj) + "." + std::to_string(verMin) + "." + std::to_string(verRev);
-    return ret;
-
-  }
-
-
-  int CarpeDM::parseFwVersionString(const std::string& s) {
-
-    int verMaj, verMin, verRev;
-    std::vector<std::string> x;
 
 
 
-    try { boost::split(x, s, boost::is_any_of(".")); } catch (...) {};
-    if (x.size() != 3) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
-
-    verMaj = std::stoi (x[(int)FwId::VERSION_MAJOR]);
-    verMin = std::stoi (x[(int)FwId::VERSION_MINOR]);
-    verRev = std::stoi (x[(int)FwId::VERSION_REVISION]);
-
-    if (verMaj < 0 || verMaj > 99 || verMin < 0 || verMin > 99 || verRev < 0 || verRev > 99) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
-    else {return verMaj * (int)FwId::VERSION_MAJOR_MUL + verMin * (int)FwId::VERSION_MINOR_MUL  + verRev * (int)FwId::VERSION_REVISION_MUL;}
 
 
-  }
-
-    //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
-  const std::string CarpeDM::getFwIdROM(uint8_t cpuIdx) {
-    //FIXME replace with FW ID string constants
-    const std::string tagMagic      = "UserLM32";
-    const std::string tagProject    = "Project     : ";
-    const std::string tagExpName    = "ftm";
-    std::string version;
-    size_t pos;
-    struct  sdb_device& ram = cpuDevs.at(cpuIdx);
-    vAdr fwIdAdr;
-    //FIXME get rid of SHARED_OFFS somehow and replace with an end tag and max limit
-    for (uint32_t adr = ram.sdb_component.addr_first + BUILDID_OFFS; adr < ram.sdb_component.addr_first + BUILDID_OFFS + BUILDID_SIZE; adr += 4) fwIdAdr.push_back(adr);
-    vBuf fwIdData = ebReadCycle(ebd, fwIdAdr);
-    std::string s(fwIdData.begin(),fwIdData.end());
-
-    //check for magic word
-    pos = 0;
-    if(s.find(tagMagic, 0) == std::string::npos) {throw std::runtime_error( "Bad Firmware Info ROM: Magic word not found\n");}
-    //check for project name
-    pos = s.find(tagProject, 0);
-    if (pos == std::string::npos || (s.find(tagExpName, pos + tagProject.length()) != pos + tagProject.length())) {throw std::runtime_error( "Bad Firmware Info ROM: Not a DM project\n");}
-
-    return s;
-  }
-
-  //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
-  int CarpeDM::getFwVersion(const std::string& fwIdROM) {
-    //FIXME replace with FW ID string constants
-    //get Version string xx.yy.zz
-
-    std::string version = readFwIdROMTag(fwIdROM, "Version     : ", 10, true);
-
-    int ret = parseFwVersionString(version);
-
-    return ret;
-  }
-
-
-  const std::string CarpeDM::readFwIdROMTag(const std::string& fwIdROM, const std::string& tag, size_t maxlen, bool stopAtCr ) {
-    size_t pos, posEnd, tmp;
-    std::string s = fwIdROM;
-
-    tmp = s.find(tag, 0);
-    if(tmp == std::string::npos) throw std::runtime_error( "Could not find tag <" + tag + ">in FW ID ROM\n");
-    pos = tmp + tag.length();
-
-    tmp = s.find("\n", pos);
-    if( (tmp == std::string::npos) || (tmp > (pos + maxlen)) ) posEnd = (pos + maxlen);
-    else posEnd = tmp;
-
-    return s.substr(pos, posEnd - pos);
-
-
-  }
-
-  // SDB Functions
-  bool CarpeDM::isValidDMCpu(uint8_t cpuIdx) {return (cpuIdxMap.count(cpuIdx) > 0);}; //Check if CPU is registered as running a valid firmware
-  int CarpeDM::getCpuQty()   const {return cpuQty;} //Return number of found CPUs (not necessarily valid ones!)
-  bool CarpeDM::isCpuIdxValid(uint8_t cpuIdx) { if ( cpuIdxMap.find(cpuIdx) != cpuIdxMap.end() ) return true; else return false;}
-
-
-
-  uint32_t CarpeDM::getIntBaseAdr(const std::string& fwIdROM) {
-    //FIXME replace with FW ID string constants
-    //CAREFUL: Get the EXACT position. If you miss out on leading spaces, the parsed number gets truncated!
-    std::string value = readFwIdROMTag(fwIdROM, "IntAdrOffs  : ", 10, true);
-    //sLog << "IntAdrOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
-    return s2u<uint32_t>(value);
-
-  }
-
-  uint32_t CarpeDM::getSharedOffs(const std::string& fwIdROM) {
-    //FIXME replace with FW ID string constants
-    std::string value = readFwIdROMTag(fwIdROM, "SharedOffs  : ", 10, true);
-    //sLog << "Parsing SharedOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
-    return s2u<uint32_t>(value);
-
-  }
-
-  uint32_t CarpeDM::getSharedSize(const std::string& fwIdROM){
-    std::string value = readFwIdROMTag(fwIdROM, "SharedSize  : ", 10, true);
-    //sLog << "SharedSize : " << value << " parsed: "  << std::dec << s2u<uint32_t>(value) << std::endl;
-    return s2u<uint32_t>(value);
-
-  }
+ 
 
 
 

@@ -1,9 +1,7 @@
 #ifndef _CARPEDM_H_
 #define _CARPEDM_H_
 
-#define SDB_VENDOR_GSI      0x0000000000000651ULL
-#define SDB_DEVICE_LM32_RAM 0x54111351
-#define SDB_DEVICE_DIAG     0x18060200
+
 
 #include <stdio.h>
 #include <iostream>
@@ -28,7 +26,7 @@
 
 class MiniCommand;
 
-using namespace etherbone;
+
 
 class CarpeDM {
 
@@ -36,11 +34,6 @@ private:
 
   std::string outputfilename;
   std::string inputfilename;
-
-  std::vector<int> vFw;
-  std::map<uint8_t, uint8_t> cpuIdxMap;
-
-  std::unique_pointer<EbWrapper> pEbd;
 
   int cpuQty = -1;
   HashMap hm;
@@ -50,8 +43,6 @@ private:
   Graph gUp;
   AllocTable atDown;
   Graph gDown;
-  LockManager lm = LockManager(ebd, sim, hm, ct, atDown); //get us an instance of the lock manager
-
 
   uint64_t modTime;
   bool freshDownload = false;
@@ -64,7 +55,8 @@ private:
   std::ostream& sLog;
   std::ostream& sErr;
 
-
+  EbWrapper ebd = EbWrapper(sLog, sErr, verbose, debug);
+  LockManager lm = LockManager(ebd, hm, ct, atDown); //get us an instance of the lock manager
 
   void updateListDstStaging(vertex_t v);
   void updateStaging(vertex_t v, edge_t e);
@@ -184,9 +176,6 @@ private:
 
   boost::dynamic_properties createParser(Graph& g);
 
-  //std::string getFwInfo(uint8_t cpuIdx);
-  int parseFwVersionString(const std::string& s);
-  const std::string createFwVersionString(const int fwVer);
 
   Graph& getUpGraph(); //Returns the Upload Graph for CPU <cpuIdx>
 
@@ -202,8 +191,17 @@ public:
   ~CarpeDM() {};
 
 // Etherbone interface
-               bool connect(const std::string& en, bool simulation=false, bool test=false) {if (pEbd == NULL) { (pEbd = new (simulation ? EbDev(en) : EbSim(en))); }} //Open connection to a DM via Etherbone
-               bool disconnect(); //Close connection
+               bool connect(const std::string& en, bool simulation=false, bool test=false) {
+                    atUp.clear();
+                    atUp.removeMemories();
+                    gUp.clear();
+                    atDown.clear();
+                    atDown.removeMemories();
+                    gDown.clear();
+
+                    return ebd.connect(en, atUp, atDown); 
+                } //Open connection to a DM via Etherbone
+               bool disconnect() {return ebd.disconnect();} //Close connection
                // SDB and DM HW detection Functions
                bool isValidDMCpu(uint8_t cpuIdx);              // Check if CPU is registered as running a valid firmware
   const std::string getFwIdROM(uint8_t cpuIdx);
@@ -334,7 +332,7 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void debugOn()  {debug = true;}                                  // Turn on Verbose Output
                void debugOff() {debug = false;}                                 // Turn off Verbose Output
                bool isDebug()  const {return debug;}                            // Tell if Output is set to Verbose
-               bool isSim()  const {return ebdsim;}                                // Tell if this is a simulation. Cannot change while connected !!!
+               bool isSim()  const {return sim;}                         // Tell if this is a simulation. Cannot change while connected !!!
                void testOn()  {testmode = true;}                                // Turn on Testmode
                void testOff() {testmode = false;}                               // Turn off Testmode
                bool isTest() const {return testmode;}                           // Tell if Testmode is on
@@ -356,7 +354,6 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void show(const std::string& title, const std::string& logDictFile, TransferDir dir, bool filterMeta );
                void showUp(bool filterMeta);                                               // show a CPU's Upload address table
                void showDown(bool filterMeta);
-               void showCpuList();
                void dumpNode(uint8_t cpuIdx, const std::string& name);                     // hex dump a node
                void inspectHeap(uint8_t cpuIdx);
                void showHashDict();

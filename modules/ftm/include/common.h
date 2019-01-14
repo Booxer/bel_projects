@@ -219,6 +219,7 @@ typedef struct {
 
 
 
+
 vBl leadingOne(size_t length);
 
 template <typename T>
@@ -313,5 +314,39 @@ void hexDump (const char *desc, vBuf vb);
 
 std::string fixArchiveVersion(const std::string& s);
 
+
+vEbwrs operator+(const vEbwrs &A, const vEbwrs &B)
+{
+    vEbwrs AB;
+    AB.va = A.va + B.va;
+    AB.vb = A.vb + B.vb;
+    AB.vcs = A.vcs + B.vcs;
+    return AB;
+}
+
+vEbwrs& operator+=(vEbwrs &A, const vEbwrs &B)
+{
+
+    A.va = A.va + B.va;
+    A.vb = A.vb + B.vb;
+    A.vcs = A.vcs + B.vcs;
+    return A;
+}
+
+vEbrds operator+(const vEbrds& A, const vEbrds &B)
+{
+    vEbrds AB;
+    AB.va = A.va + B.va;
+    AB.vcs = A.vcs + B.vcs;
+    return AB;
+}
+
+vEbrds& operator+=(vEbrds& A, const vEbrds &B)
+{
+
+    A.va = A.va + B.va;
+    A.vcs = A.vcs + B.vcs;
+    return A;
+}
 
 #endif

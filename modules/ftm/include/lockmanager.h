@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string>
 #include <inttypes.h>
-#include <etherbone.h>
+#include "ebwrapper.h"
 #include "common.h"
 #include "hashmap.h"
 #include "alloctable.h"
@@ -31,9 +31,8 @@
 
 class LockManager {
 private:
-  etherbone::Device& ebd;
+  EbWrapper& ebd;
   std::vector<BlockLock> vBl;
-  const bool& sim;
   HashMap& hm;
   CovenantTable& ct;
   AllocTable& at;
@@ -44,7 +43,7 @@ private:
 
 public:
 
-  LockManager(etherbone::Device& ebd, const bool& simulation, HashMap& hm, CovenantTable& ct, AllocTable& at) : ebd(ebd), sim(simulation), hm(hm), ct(ct), at(at) {};
+  LockManager(EbWrapper& ebd, HashMap& hm, CovenantTable& ct, AllocTable& at) : ebd(ebd), hm(hm), ct(ct), at(at) {};
   ~LockManager(){};
 
   const std::vector<BlockLock>& getLockVec() {return vBl;}

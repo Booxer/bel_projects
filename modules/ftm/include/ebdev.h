@@ -1,5 +1,5 @@
 #include "ebwrapper.h"
-#include <etherbone.h>
+
 
 Class EbDev public EbWrapper {
 

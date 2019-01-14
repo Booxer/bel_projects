@@ -1,87 +1,7 @@
-void EbWrapper::simAdrTranslation (uint32_t a, uint8_t& cpu, uint32_t& arIdx) {
-  //get cpu
-  /*
-   if (debug) sLog << "cpuQty "  << getCpuQty() << std::endl;
-  for (uint8_t cpuIdx = 0; cpuIdx < getCpuQty(); cpuIdx++) {
-    if (debug) sLog << "a : " << std::hex << a << ", cmpA " << simRamAdrMap[cpuIdx] << " cpu " << (int)cpuIdx << " arIdx "  << arIdx << std::endl;
-    if (simRamAdrMap[cpuIdx] > a) break;
-    cpu = cpuIdx;
-  }
-  */
-  cpu = ((a >> 17) & 0x7) -1;
-  arIdx = atDown.adrConv(AdrType::EXT, AdrType::MGMT, cpu, a) >> 2;
-}
+#include "ebwrapper.h"
+#include <etherbone.h>
 
-void EbWrapper::simRamWrite (uint32_t a, eb_data_t d) {
-  uint8_t cpu = -1;
-  uint32_t arIdx;
-  if (debug) sLog << "cpu : " << (int)cpu << " arIdx " << std::hex << arIdx << std::endl;
-  simAdrTranslation (a, cpu, arIdx);
-  simRam[cpu][arIdx] = d;
-}
-
-
-void EbWrapper::simRamRead (uint32_t a, eb_data_t* d) {
-  uint8_t cpu;
-  uint32_t arIdx;
-  simAdrTranslation (a, cpu, arIdx);
-  *d = simRam[cpu][arIdx];
-}
-
-int EbWrapper::simWriteCycle(vAdr va, vBuf& vb) {
-  if (debug) sLog << "Starting Write Cycle" << std::endl;
-  eb_data_t veb[va.size()];
-
-  for(int i = 0; i < (va.end()-va.begin()); i++) {
-   uint32_t data = vb[i*4 + 0] << 24 | vb[i*4 + 1] << 16 | vb[i*4 + 2] << 8 | vb[i*4 + 3];
-   veb[i] = (eb_data_t)data;
-  }
-
-
-  for(int i = 0; i < (va.end()-va.begin()); i++) {
-
-    if (debug) sLog << " Writing @ 0x" << std::hex << std::setfill('0') << std::setw(8) << va[i] << " : 0x" << std::hex << std::setfill('0') << std::setw(8) << veb[i] << std::endl;
-    simRamWrite(va[i], veb[i]);
-  }
-
-
-  return 0;
-
-}
-
-
-
-
-
-vBuf EbWrapper::simReadCycle(vAdr va)
-{
-
-
-  eb_data_t veb[va.size()];
-  vBuf ret = vBuf(va.size() * 4);
-  if (debug) sLog << "Starting Read Cycle" << std::endl;
-  //sLog << "Got Adr Vec with " << va.size() << " Adrs" << std::endl;
-
-
-  for(int i = 0; i < (va.end()-va.begin()); i++) {
-    if (debug) sLog << " Reading @ 0x" << std::hex << std::setfill('0') << std::setw(8) << va[i] << std::endl;
-    simRamRead(va[i], (eb_data_t*)&veb[i]);
-  }
-
-  //FIXME use endian functions
-  for(unsigned int i = 0; i < va.size(); i++) {
-    ret[i * 4]     = (uint8_t)(veb[i] >> 24);
-    ret[i * 4 + 1] = (uint8_t)(veb[i] >> 16);
-    ret[i * 4 + 2] = (uint8_t)(veb[i] >> 8);
-    ret[i * 4 + 3] = (uint8_t)(veb[i] >> 0);
-  }
-
-  return ret;
-}
-
-
-
-int EbWrapper::ebWriteCycle(vAdr va, vBuf& vb, vBl vcs)
+int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs)
 {
 
   //eb_status_t status;
@@ -96,12 +16,12 @@ int EbWrapper::ebWriteCycle(vAdr va, vBuf& vb, vBl vcs)
    veb[i] = (eb_data_t)data;
   }
   try {
-    cyc.open(dev);
+    cyc.open(ebd);
     for(int i = 0; i < (va.end()-va.begin()); i++) {
     if (i && vcs.at(i)) {
       cyc.close();
       if (debug) sLog << "Close and open next Write Cycle" << std::endl;
-      cyc.open(dev);
+      cyc.open(ebd);
     }
 
     if (debug) sLog << " Writing @ 0x" << std::hex << std::setfill('0') << std::setw(8) << va[i] << " : 0x" << std::hex << std::setfill('0') << std::setw(8) << veb[i] << std::endl;
@@ -116,11 +36,16 @@ int EbWrapper::ebWriteCycle(vAdr va, vBuf& vb, vBl vcs)
    return 0;
 }
 
-int   EbWrapper::ebWriteCycle(vAdr va, vBuf& vb) {return  ebWriteCycle(dev, va, vb, leadingOne(va.size()));}
+
+int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb) {
+  vBl vcs = leadingOne(va.size());
+  checkWriteCycle(va, vb, vcs);
+  return  writeCycle(va, vb, vcs);
+}
 
 
 
-vBuf EbWrapper::ebReadCycle(vAdr va, vBl vcs)
+vBuf EbWrapper::readCycle(const vAdr& va, const vBl& vcs)
 {
   //FIXME What about MTU? What about returned eb status ??
 
@@ -131,13 +56,13 @@ vBuf EbWrapper::ebReadCycle(vAdr va, vBl vcs)
   //sLog << "Got Adr Vec with " << va.size() << " Adrs" << std::endl;
 
   try {
-    cyc.open(dev);
+    cyc.open(ebd);
     for(int i = 0; i < (va.end()-va.begin()); i++) {
     //FIXME dirty break into cycles
     if (i && vcs.at(i)) {
       cyc.close();
       if (debug) sLog << "Close and open next Read Cycle" << std::endl;
-      cyc.open(dev);
+      cyc.open(ebd);
     }
     if (debug) sLog << " Reading @ 0x" << std::hex << std::setfill('0') << std::setw(8) << va[i] << std::endl;
     cyc.read(va[i], EB_BIG_ENDIAN | EB_DATA32, (eb_data_t*)&veb[i]);
@@ -158,97 +83,49 @@ vBuf EbWrapper::ebReadCycle(vAdr va, vBl vcs)
   return ret;
 }
 
-vBuf EbWrapper::ebReadCycle(vAdr va) {return  ebReadCycle(dev, va, leadingOne(va.size()));}
-
-int EbWrapper::ebWriteWord(uint32_t adr, uint32_t data)
-{
-  uint8_t b[_32b_SIZE_];
-  writeLeNumberToBeBytes(b, data);
-  vAdr vA({adr});
-  vBuf vD(std::begin(b), std::end(b) );
-
-  return ebWriteCycle(ebd, vA, vD);
+vBuf EbWrapper::readCycle(const vAdr& va) {
+  return  readCycle(va, leadingOne(va.size()));
 }
 
-uint32_t EbWrapper::ebReadWord(uint32_t adr)
+int EbWrapper::write32b(uint32_t adr, uint32_t data)
 {
   vAdr vA({adr});
-  vBuf vD = ebReadCycle(ebd, vA);
-  uint8_t* b = &vD[0];
+  vBuf vD;
+  writeLeNumberToBeBytes(vD, data);
+  vBl vcs = leadingOne(vA.size());
+  checkWriteCycle(vA, vD, vcs);
+  return writeCycle(vA, vD, vcs);
+}
 
-  return writeBeBytesToLeNumber<uint32_t>(b);
+uint32_t EbWrapper::read32b(uint32_t adr)
+{
+  vAdr va({adr});
+  vBl vcs = leadingOne(va.size());
+  checkReadCycle(va, vb, vcs);
+  vBuf vb = readCycle(va);
+  return writeBeBytesToLeNumber<uint32_t>(vD);
 }
 
  //Reads and returns a 64 bit word from DM
 uint64_t EbWrapper::read64b(uint32_t startAdr) {
   vAdr vA({startAdr + 0, startAdr + _32b_SIZE_});
-  vBuf vD = ebReadCycle(ebd, vA);
-  uint8_t* b = &vD[0];
-
-  return writeBeBytesToLeNumber<uint64_t>(b);
+  vBuf vD = readCycle(vA);
+  return writeBeBytesToLeNumber<uint64_t>(vD);
 }
 
 int EbWrapper::write64b(uint32_t startAdr, uint64_t d) {
-  uint8_t b[_TS_SIZE_];
-  writeLeNumberToBeBytes(b, d);
+  vBuf vD;
+  writeLeNumberToBeBytes(vD, d);
   vAdr vA({startAdr + 0, startAdr + _32b_SIZE_});
-  vBuf vD(std::begin(b), std::end(b) );
+  vBl vcs = leadingOne(vA.size());
+  checkWriteCycle(vA, vD, vcs);
 
-  return ebWriteCycle(ebd, vA, vD);
-
-}
-
-bool EbWrapper::simConnect() {
-    simRam.clear();
-    simRamAdrMap.clear();
- 
-    ebdevname = "simDummy"; //copy to avoid mem trouble later
-    uint8_t mappedIdx = 0;
-    uint32_t const intBaseAdr   = 0x1000000;
-    uint32_t const sharedSize   = 98304;
-    uint32_t const rawSize      = 131072;
-    uint32_t const sharedOffs   = 0x500;
-    uint32_t const devBaseAdr   = 0x4120000;
-    cpuQty = 4;
-
-    atUp.clear();
-    atUp.removeMemories();
-    gUp.clear();
-    atDown.clear();
-    atDown.removeMemories();
-    gDown.clear();
-    cpuIdxMap.clear();
-    cpuDevs.clear();
-
-
-
-
-    sLog << "Connecting to Sim... ";
-    simRam.reserve(cpuQty);
-
-    for(int cpuIdx = 0; cpuIdx< cpuQty; cpuIdx++) {
-      simRam[cpuIdx]        = new uint32_t [(rawSize + _32b_SIZE_ -1) >> 2];
-      cpuIdxMap[cpuIdx]     = mappedIdx;
-      uint32_t extBaseAdr   = devBaseAdr + cpuIdx * rawSize;
-      simRamAdrMap[cpuIdx]  = extBaseAdr;
-      uint32_t peerBaseAdr  = WORLD_BASE_ADR  + extBaseAdr;
-      uint32_t space        = sharedSize - _SHCTL_END_;
-
-      atUp.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
-      atDown.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
-      mappedIdx++;
-    }
-    sLog << "done" << std::endl;
-    return true;
+  return writeCycle(vA, vD, vcs);
 
 }
 
 
-bool EbWrapper::ebConnect(const std::string& en, bool test) {
-    testmode = test;
-
-
-    ebdevname = std::string(en); //copy to avoid mem trouble later
+bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atDown) {
     bool  ret = false;
     uint8_t mappedIdx = 0;
     int expVersion = parseFwVersionString(EXP_VER), foundVersion;
@@ -256,16 +133,12 @@ bool EbWrapper::ebConnect(const std::string& en, bool test) {
 
     if (expVersion <= 0) {throw std::runtime_error("Bad required minimum firmware version string received from Makefile"); return false;}
 
-    atUp.clear();
-    atUp.removeMemories();
-    gUp.clear();
-    atDown.clear();
-    atDown.removeMemories();
-    gDown.clear();
+
     cpuIdxMap.clear();
     cpuDevs.clear();
 
     vFw.clear();
+    vFwIdROM.clear();
 
     if(verbose) sLog << "Connecting to " << en << "... ";
     try {
@@ -283,8 +156,8 @@ bool EbWrapper::ebConnect(const std::string& en, bool test) {
 
         for(int cpuIdx = 0; cpuIdx< cpuQty; cpuIdx++) {
           //only create MemUnits for valid DM CPUs, generate Mapping so we can still use the cpuIdx supplied by User
-          const std::string fwIdROM = getFwIdROM(cpuIdx);
-          foundVersion = getFwVersion(fwIdROM);
+          vFwIdROM[cpuIdx] = getFwIdROM(cpuIdx);
+          foundVersion = getFwVersion(fwIdROM[cpuIdx]);
           foundVersionMax = foundVersionMax < foundVersion ? foundVersion : foundVersionMax;
           vFw.push_back(foundVersion);
           int expVersionMin = expVersion;
@@ -297,11 +170,11 @@ bool EbWrapper::ebConnect(const std::string& en, bool test) {
             cpuIdxMap[cpuIdx]    = mappedIdx;
 
             uint32_t extBaseAdr   = cpuDevs[cpuIdx].sdb_component.addr_first;
-            uint32_t intBaseAdr   = getIntBaseAdr(fwIdROM);
+            uint32_t intBaseAdr   = getIntBaseAdr(vFwIdROM[cpuIdx]);
             uint32_t peerBaseAdr  = WORLD_BASE_ADR + extBaseAdr;
             uint32_t rawSize      = cpuDevs[cpuIdx].sdb_component.addr_last - cpuDevs[cpuIdx].sdb_component.addr_first;
-            uint32_t sharedOffs   = getSharedOffs(fwIdROM);
-            uint32_t space        = getSharedSize(fwIdROM) - _SHCTL_END_;
+            uint32_t sharedOffs   = getSharedOffs(vFwIdROM[cpuIdx]);
+            uint32_t space        = getSharedSize(vFwIdROM[cpuIdx]) - _SHCTL_END_;
 
               atUp.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             atDown.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
@@ -333,18 +206,7 @@ bool EbWrapper::ebConnect(const std::string& en, bool test) {
 
   }
 
-  bool EbWrapper::simDisconnect() {
-
-
-    bool ret = false;
-
-    if(verbose) sLog << "Disconnecting ... ";
-    if(verbose) sLog << " Done" << std::endl;
-    
-    return ret;
-  }
-
-  bool EbWrapper::ebDisconnect() {
+  bool EbWrapper::disconnect() {
     bool ret = false;
 
     if(verbose) sLog << "Disconnecting ... ";
@@ -364,17 +226,167 @@ bool EbWrapper::ebConnect(const std::string& en, bool test) {
   }
 
 
-  readCycle () {
-    if (va.size() != vcs.size()) throw std::runtime_error(" EB Read cycle Adr / Flow control vector lengths (" + std::to_string(va.size()) + "/" + std::to_string(vcs.size()) + ") do not match\n");
 
-    if (sim) simWriteCycle();
-    else ebWriteCycle();
+ 
 
-  writeCycle()  
-    if ( (va.size() != vcs.size()) || ( va.size() * _32b_SIZE_ != vb.size() ) )
-    throw std::runtime_error(" EB/sim write cycle Adr / Data / Flow control vector lengths (" + std::to_string(va.size()) + "/" + std::to_string(vb.size() /  _32b_SIZE_) + "/" + std::to_string(vcs.size()) +") do not match\n");
+  uint64_t EbWrapper::getDmWrTime() const {
+    /* get time from Cluster Time Module (ECA Time with or wo ECA) */
+    uint64_t wrTime;
 
-    if (sim) simWriteCycle();
-    else ebWriteCycle();
+    eb_data_t    nsHi, nsLo;
+    Cycle cyc;
+    uint32_t cluTimeAddr = cluTimeDevs[0].sdb_component.addr_first;
+
+      try {
+        cyc.open(ebd);
+        cyc.read( cluTimeAddr + CluTime::timeHiW, EB_BIG_ENDIAN|EB_DATA32, &nsHi);
+        cyc.read( cluTimeAddr + CluTime::timeLoW, EB_BIG_ENDIAN|EB_DATA32, &nsLo);
+        cyc.close(ebd);
+      } catch (etherbone::exception_t const& ex) {
+        throw std::runtime_error("Etherbone " + std::string(ex.method) + " returned " + std::string(eb_status(ex.status)) + "\n" );
+      }
+
+
+    /* time */
+    wrTime = (uint64_t)nsHi << 32;
+    wrTime = wrTime + (uint64_t)nsLo;
+
+    return wrTime;
+  }
+
+void EbWrapper::showCpuList() {
+  int expVersionMin = parseFwVersionString(EXP_VER);
+  int expVersionMax = (expVersionMin / (int)FwId::VERSION_MAJOR_MUL) * (int)FwId::VERSION_MAJOR_MUL
+                   + 99 * (int)FwId::VERSION_MINOR_MUL
+                   + 99 * (int)FwId::VERSION_REVISION_MUL;
+
+  sLog << std::endl << std::setfill(' ') << std::setw(5) << "CPU" << std::setfill(' ') << std::setw(11) << "FW found"
+       << std::setfill(' ') << std::setw(11) << "Min" << std::setw(11) << "Max" << std::setw(11) << "Space" << std::setw(11) << "Free" << std::endl;
+  for (int x = 0; x < cpuQty; x++) {
+
+    sLog << std::dec << std::setfill(' ') << std::setw(5) << x << std::setfill(' ') << std::setw(11) << createFwVersionString(vFw[x])
+                                                                       << std::setfill(' ') << std::setw(11) << createFwVersionString(expVersionMin)
+                                                                       << std::setfill(' ') << std::setw(11) << createFwVersionString(expVersionMax);
+
+    sLog << std::dec << std::setfill(' ') << std::setw(11) << atDown.getTotalSpace(x) << std::setw(10) << atDown.getFreeSpace(x) * 100 / atDown.getTotalSpace(x) << "%";
+    sLog << std::endl;
+  }
+
+}
+
+
+    //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
+  const std::string EbWrapper::getFwIdROM(uint8_t cpuIdx) {
+    //FIXME replace with FW ID string constants
+    const std::string tagMagic      = "UserLM32";
+    const std::string tagProject    = "Project     : ";
+    const std::string tagExpName    = "ftm";
+    std::string version;
+    size_t pos;
+    struct  sdb_device& ram = cpuDevs.at(cpuIdx);
+    vAdr fwIdAdr;
+    //FIXME get rid of SHARED_OFFS somehow and replace with an end tag and max limit
+    for (uint32_t adr = ram.sdb_component.addr_first + BUILDID_OFFS; adr < ram.sdb_component.addr_first + BUILDID_OFFS + BUILDID_SIZE; adr += 4) fwIdAdr.push_back(adr);
+    vBuf fwIdData = readCycle(fwIdAdr);
+    std::string s(fwIdData.begin(),fwIdData.end());
+
+    //check for magic word
+    pos = 0;
+    if(s.find(tagMagic, 0) == std::string::npos) {throw std::runtime_error( "Bad Firmware Info ROM: Magic word not found\n");}
+    //check for project name
+    pos = s.find(tagProject, 0);
+    if (pos == std::string::npos || (s.find(tagExpName, pos + tagProject.length()) != pos + tagProject.length())) {throw std::runtime_error( "Bad Firmware Info ROM: Not a DM project\n");}
+
+    return s;
+  }
+
+    const std::string EbWrapper::createFwVersionString(const int fwVer) {
+
+    unsigned int fwv = (unsigned int)fwVer;
+    std::string ret;
+
+    unsigned int verMaj = fwv / (unsigned int)FwId::VERSION_MAJOR_MUL; fwv %= (unsigned int)FwId::VERSION_MAJOR_MUL;
+    unsigned int verMin = fwv / (unsigned int)FwId::VERSION_MINOR_MUL; fwv %= (unsigned int)FwId::VERSION_MINOR_MUL;
+    unsigned int verRev = fwv;
+
+    ret = std::to_string(verMaj) + "." + std::to_string(verMin) + "." + std::to_string(verRev);
+    return ret;
+
+  }
+
+
+  int EbWrapper::parseFwVersionString(const std::string& s) {
+
+    int verMaj, verMin, verRev;
+    std::vector<std::string> x;
+
+
+
+    try { boost::split(x, s, boost::is_any_of(".")); } catch (...) {};
+    if (x.size() != 3) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
+
+    verMaj = std::stoi (x[(int)FwId::VERSION_MAJOR]);
+    verMin = std::stoi (x[(int)FwId::VERSION_MINOR]);
+    verRev = std::stoi (x[(int)FwId::VERSION_REVISION]);
+
+    if (verMaj < 0 || verMaj > 99 || verMin < 0 || verMin > 99 || verRev < 0 || verRev > 99) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
+    else {return verMaj * (int)FwId::VERSION_MAJOR_MUL + verMin * (int)FwId::VERSION_MINOR_MUL  + verRev * (int)FwId::VERSION_REVISION_MUL;}
+
+
+  }
+
+
+
+  //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
+  int EbWrapper::getFwVersion(const std::string& fwIdROM) {
+    //FIXME replace with FW ID string constants
+    //get Version string xx.yy.zz
+
+    std::string version = readFwIdROMTag(fwIdROM, "Version     : ", 10, true);
+
+    int ret = parseFwVersionString(version);
+
+    return ret;
+  }
+
+
+  const std::string EbWrapper::readFwIdROMTag(const std::string& fwIdROM, const std::string& tag, size_t maxlen, bool stopAtCr ) {
+    size_t pos, posEnd, tmp;
+    std::string s = fwIdROM;
+
+    tmp = s.find(tag, 0);
+    if(tmp == std::string::npos) throw std::runtime_error( "Could not find tag <" + tag + ">in FW ID ROM\n");
+    pos = tmp + tag.length();
+
+    tmp = s.find("\n", pos);
+    if( (tmp == std::string::npos) || (tmp > (pos + maxlen)) ) posEnd = (pos + maxlen);
+    else posEnd = tmp;
+
+    return s.substr(pos, posEnd - pos);
+  }
+
+
+
+   uint32_t EbWrapper::getIntBaseAdr(const std::string& fwIdROM) {
+    //FIXME replace with FW ID string constants
+    //CAREFUL: Get the EXACT position. If you miss out on leading spaces, the parsed number gets truncated!
+    std::string value = ebd.readFwIdROMTag(fwIdROM, "IntAdrOffs  : ", 10, true);
+    //sLog << "IntAdrOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
+    return s2u<uint32_t>(value);
+
+  }
+
+  uint32_t EbWrapper::getSharedOffs(const std::string& fwIdROM) {
+    //FIXME replace with FW ID string constants
+    std::string value = ebd.readFwIdROMTag(fwIdROM, "SharedOffs  : ", 10, true);
+    //sLog << "Parsing SharedOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
+    return s2u<uint32_t>(value);
+
+  }
+
+  uint32_t EbWrapper::getSharedSize(const std::string& fwIdROM){
+    std::string value = ebd.readFwIdROMTag(fwIdROM, "SharedSize  : ", 10, true);
+    //sLog << "SharedSize : " << value << " parsed: "  << std::dec << s2u<uint32_t>(value) << std::endl;
+    return s2u<uint32_t>(value);
 
   }
