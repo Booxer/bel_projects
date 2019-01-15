@@ -99,7 +99,8 @@ std::string nsTimeToDate(uint64_t t) {
 
 void showStatus(const char *netaddress, CarpeDM& cdm, bool verbose) {
   std::string show;
-  cdm.showCpuList();
+  cdm.showMemSpace();
+  cdm.showMemSpace();
   if(cdm.isOptimisedS2R()) cdm.dirtyCtShow();
   uint8_t cpuQty = cdm.getCpuQty();
   uint8_t thrQty = _THR_QTY_;
@@ -463,7 +464,7 @@ int main(int argc, char* argv[]) {
 
   vAdr cmdAdrs;
   vBuf cmdData;
-  mc_ptr mc = NULL;
+  vEbwrs ew;
 
   //check if we got a dot full of commands and send if so
   if (cmdFilename != NULL) {
@@ -488,8 +489,7 @@ int main(int argc, char* argv[]) {
 
     if      (cmp == dnt::sCmdNoop)  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
-      cdm.adjustValidTime(cmdTvalid, false);
-      mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
+      cdm.processQCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0);
     }
     else if (cmp == "status")  {
       showStatus(netaddress, cdm, verbose);
@@ -506,48 +506,31 @@ int main(int argc, char* argv[]) {
       std::string toNode   = (para == DotStr::Node::Special::sIdle ) ? DotStr::Node::Special::sIdle : cdm.getPatternEntryNode(para);
 
       if ( cdm.isInHashDict( fromNode ) && ( (toNode == DotStr::Node::Special::sIdle ) || cdm.isInHashDict( toNode )  )) {
-        uint32_t adr;
-        try {
-          adr = cdm.getNodeAdr(toNode, TransferDir::DOWNLOAD, AdrType::INT);
-        } catch (std::runtime_error const& err) {
-          std::cerr << program << ": Could not obtain address of destination node " << toNode << ". Cause: " << err.what() << std::endl;
-        }
-        cdm.adjustValidTime(cmdTvalid, true);
-        mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, permanent );
+        cdm.processFlowCommand(ew, cmp, fromNode, toNode, cmdPrio, cmdQty, true, 0, permanent);
       } else {std::cerr << program << ": Destination Node '" << toNode << "'' was not found on DM" << std::endl; return -1; }
       targetName = fromNode.c_str();
     }
     else if (cmp == dnt::sCmdFlow)  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if ((para != NULL) && ((para == DotStr::Node::Special::sIdle ) || cdm.isInHashDict( para))) {
-        uint32_t adr;
-        try {
-          adr = cdm.getNodeAdr(para, TransferDir::DOWNLOAD, AdrType::INT);
-        } catch (std::runtime_error const& err) {
-          std::cerr << program << ": Could not obtain address of destination node " << para << ". Cause: " << err.what() << std::endl;
-        }
-        cdm.adjustValidTime(cmdTvalid, true);
-        mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, permanent );
+        cdm.processFlowCommand(ew, cmp, targetName, para, cmdPrio, cmdQty, true, 0, permanent);
       } else {std::cerr << program << ": Destination Node '" << para << "'' was not found on DM" << std::endl; return -1; }
     }
     else if (cmp == "relwait")  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if (para == NULL) {std::cerr << program << ": Wait time in ns is missing" << std::endl; return -1; }
-      cdm.adjustValidTime(cmdTvalid, true);
-      mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, strtoll(para, NULL, 0), permanent, false );
+      cdm.processWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), false);
     }
     else if (cmp == "abswait")  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if (para == NULL) {std::cerr << program << ": Wait time in ns is missing" << std::endl; return -1; }
-      cdm.adjustValidTime(cmdTvalid, true);
-      mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, strtoll(para, NULL, 0), permanent, true );
+      cdm.processWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), true);
     }
     else if (cmp == dnt::sCmdFlush) {
         if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
         if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
         uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
-        cdm.adjustValidTime(cmdTvalid, true);
-        mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1), LM32_NULL_PTR, false);
+        processFlushCommand(ew, cmp, targetName, "", cmdPrio, cmdQty, true, 0, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1));
     }
     else if (cmp == "staticflush") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
@@ -564,7 +547,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == "lock") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          cdm.blockLock(targetName);
+          processNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not lock block " << targetName << ". Cause: " << err.what() << std::endl;
         }
@@ -573,10 +556,8 @@ int main(int argc, char* argv[]) {
     }
     else if (cmp == "asyncflush") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
-      if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
-      uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
       try {
-          cdm.blockAsyncFlushQueues(targetName, false, false, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1));
+          processNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not clear block " << targetName << "'s queues. Cause: " << err.what() << std::endl;
         }
@@ -585,7 +566,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == "unlock") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          cdm.blockUnlock(targetName);
+          processNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not unlock block " << targetName << ". Cause: " << err.what() << std::endl;
         }
@@ -767,9 +748,9 @@ int main(int argc, char* argv[]) {
 
 
     //all the block commands set mc, so...
-    if (mc != NULL) {
+    if (ew.va.size() > 0) {
       try {
-          cdm.sendCommand(targetName, cmdPrio, mc);
+          cdm.send(ew);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not send command " << para << ". Cause: " << err.what() << std::endl;
         }

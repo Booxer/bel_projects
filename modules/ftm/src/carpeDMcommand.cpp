@@ -106,10 +106,153 @@ void CarpeDM::adjustValidTime(uint64_t& tValid, bool abs) {
 }
 
 
-vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
+vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait )
+{
+    mc_ptr mc;
+    if(verbose) sLog << "Command  type <" << type << ">" << std::endl;
+    adjustValidTime(cmdTvalid, vabs);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Global Commands (not targeted at cmd queues of individual blocks)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    if (type == dnt::sCmdStart)   {
+      if (hm.lookup(target)) {sLog << " Starting at <" << target << ">" << std::endl; startNodeOrigin(target, ew);  }
+      else {throw std::runtime_error("Cannot execute command '" + type + "' No valid cpu/thr provided and '" + target + "' is not a valid node name\n");}
+      return ew;
+    }
+    if (type == dnt::sCmdStop)    {
+      if (hm.lookup(target)) { sLog << " Stopping at <" << target << ">" << std::endl; stopNodeOrigin(target, ew); }
+      else {throw std::runtime_error("Cannot execute command '" + type + "' No valid cpu/thr provided and '" + target + "' is not a valid node name\n");}
+      return ew;
+    }
+    else if (type == dnt::sCmdAbort)   {
+      if (hm.lookup(target)) {sLog << " Aborting (trying) at <" << target << ">" << std::endl; abortNodeOrigin(target, ew); }
+      else {throw std::runtime_error("Cannot execute command '" + type + "'. No valid cpu/thr provided and '" + target + "' is not a valid node name\n");}
+      return ew;
+    }
+
+    if (type == dnt::sCmdOrigin)   {
+      //Leave out for now and autocorrect cpu
+      try { setThrOrigin(getNodeCpu(target, TransferDir::DOWNLOAD), thr, target, ew); } catch (std::runtime_error const& err) {
+        throw std::runtime_error("Cannot execute command '" + type + "', " + std::string(err.what()));
+      }
+      return ew;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Local Commands (targeted at cmd queue of individual blocks)
+    // These operations need at least a write lock. Add it to the lock manager
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    BlockLock& lock = lm.add(target);
+
+    // lock all queues of a block
+    if (type == dnt::sCmdLock) {
+      lock.wr.set = true;
+      lock.rd.set = true;  
+      return ew;
+    // async clear all queues
+    } else if (type == dnt::sCmdAsyncClear) {
+      blockAsyncClearQueues(target, ew);
+      lock.wr.set = true;
+      lock.wr.clr = true;
+      lock.rd.set = true;
+      lock.rd.clr = true;    
+      return ew;
+    // unlock all queues
+    } else if (type == dnt::sCmdUnlock) {
+      lock.wr.clr = true;
+      lock.rd.clr = true; 
+      return ew;
+    // Commands targeted at cmd queue of individual blocks
+    } else if (type == dnt::sCmdNoop) {
+      mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
+      lock.wr.set = true;
+      lock.wr.clr = true;
+
+    } else if (type == dnt::sCmdFlow) {
+      
+      //sLog << " Flowing from <" << target << "> to <" << destination << ">, permanent defDest change='" << s2u<bool>(g[v].perma) << "'" << std::endl;
+      uint32_t adr = LM32_NULL_PTR;
+      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
+        throw std::runtime_error("Destination '" + destination + "'' invalid: " + std::string(err.what()));
+      }
+  
+      mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, perma );
+      lock.wr.set = true;
+      lock.wr.clr = true;
+
+    } else if (type == dnt::sCmdFlush) { // << " Flushing <" << target << "> Queues IL " << s2u<int>(g[v].qIl) << " HI " << s2u<int>(g[v].qHi) << " LO " << s2u<int>(g[v].qLo) <<  std::endl;
+      uint32_t adr = LM32_NULL_PTR;
+      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
+        // empty tag or invalid destination. We'll interpret this as no override desired.
+        adr = LM32_NULL_PTR;
+      }
+      mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, qIl, qHi, qLo, adr, perma);
+      lock.wr.set = true;
+      lock.wr.clr = true; 
+
+    } else if (type == dnt::sCmdWait) {
+      mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, cmdTwait, false, false );
+      lock.wr.set = true;
+      lock.wr.clr = true;                                            
+    }
+    else { throw std::runtime_error("Command type <" + type + "> is not supported!\n");}
+
+    //sLog << std::endl;
+    createMiniCommand(target, cmdPrio, mc, ew);
+
+  return ew;
+  
+}    
+
+//convenience wrappers
+//commands with no extras
+vEbwrs& processNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target) {
+  processCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false);
+}
+
+//commands with time
+vEbwrs& processQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid) {
+  return processCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, 0, false);
+}
+  
+//flows
+vEbwrs& processFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma) {
+  return processCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, false, false, false, 0, false);
+} 
+
+//flush or flush override
+vEbwrs& processFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo) {
+  return processCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, false, qIl, qHi, qLo, 0, false);
+} 
+
+//wait
+vEbwrs& processWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target,  
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait ) {
+  return processCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, cmdTwait, abswait);
+}
+
+vEbwrs& CarpeDM::processCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait)
+{
+  updateModTime();
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait);
+}
 
 
-  mc_ptr mc;
+
+
+
+
+vEbwrs& CarpeDM::processCommandBurst(vEbwrs& ew, Graph& g) {
+
+  lm.clear();
+ 
 
   if ((boost::get_property(g, boost::graph_name)).find(DotStr::Graph::Special::sCmd) == std::string::npos) {throw std::runtime_error("Expected a series of commands, but this appears to be a schedule (Tag '" + DotStr::Graph::Special::sCmd + "' not found in graphname)");}
 
@@ -119,7 +262,11 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
 
   BOOST_FOREACH( vertex_t v, vertices(g) ) {
 
-    std::string target, destination;
+    std::string target, destination, type;
+    bool qIl, qHi, qLo, perma, vabs;
+    uint64_t cmdTvalid, cmdTwait;
+    uint32_t cmdQty;
+    uint8_t cmdPrio;
 
 
 
@@ -135,132 +282,21 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
     else  if (g[v].cmdDestBp != DotStr::Misc::sUndefined)  { destination = getBeamprocEntryNode(g[v].cmdDestBp); }
     else                                                   { destination = g[v].cmdDest;}
 
-
-
-    bool vabs = s2u<bool>(g[v].vabs);
-    uint64_t cmdTvalid = s2u<uint64_t>(g[v].tValid);
-    //we need tValid always to be set slightly in the future so we can do some checks in the safeToRemove functions
-    adjustValidTime(cmdTvalid, vabs);
-
-    //sLog << "Command valid time is " << (vabs ? "absolute" : "relative") << tmpTvalid << " @ " << cmdTvalid << std::endl;
-    uint8_t  cmdPrio    = s2u<uint8_t>(g[v].prio);
-    uint8_t cpu, thr;
-
-
+    type      = g[v].type;
+    cmdPrio   = s2u<uint8_t>(g[v].prio);
+    vabs      = s2u<bool>(g[v].vabs);
+    cmdQty    = s2u<uint32_t>(g[v].qty);
+    cmdTvalid = s2u<uint64_t>(g[v].tValid);
+    cmdTwait  = s2u<uint64_t>(g[v].tWait);
+    qIl       = s2u<bool>(g[v].qIl)
+    qHi       = s2u<bool>(g[v].qHi)
+    qLo       = s2u<bool>(g[v].qLo)
+    perma     = s2u<bool>(g[v].perma);
+  
     if(verbose) sLog << "Command <" << g[v].name << ">, type <" << g[v].type << ">" << std::endl;
 
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Global Commands (not targeted at cmd queues of individual blocks)
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    if (g[v].type == dnt::sCmdStart)   {
-      if(parseCpuAndThr(v, g)) {
-        std::tie(cpu, thr) = parseCpuAndThr(v, g).get();
-        //sLog << " Starting cpu=" << (int)cpu << ", thr=" << (int)thr << std::endl;  startThr(cpu, thr, ew);
-      } else {
-        target = getPatternEntryNode(g[v].patName);
-        if (hm.lookup(target)) {sLog << " Starting at <" << target << ">" << std::endl; startNodeOrigin(target, ew);  }
-        else throw std::runtime_error("Cannot execute command '" + g[v].type + "' No valid cpu/thr provided and '" + target + "' is not a valid node name\n");
-      }
-      continue;
-    }
-    if (g[v].type == dnt::sCmdStop)    {
-      if(parseCpuAndThr(v, g)) {
-        std::tie(cpu, thr) = parseCpuAndThr(v, g).get();
-        //sLog << " Stopping (trying) cpu=" << (int)cpu << ", thr=" << (int)thr << std::endl;  stopPattern(getNodePattern(getThrCursor(cpu, thr)), ew);
-      } else {
-        if (hm.lookup(target)) { sLog << " Stopping at <" << target << ">" << std::endl; stopNodeOrigin(target, ew); }
-        else throw std::runtime_error("Cannot execute command '" + g[v].type + "' No valid cpu/thr provided and '" + target + "' is not a valid node name\n");
-      }
-      continue;
-    }
-    else if (g[v].type == dnt::sCmdAbort)   {
-      if(parseCpuAndThr(v, g)) {
-        std::tie(cpu, thr) = parseCpuAndThr(v, g).get();
-        //sLog << " Aborting cpu=" << (int)cpu << ", thr=" << (int)thr << std::endl; abortThr(cpu, thr, ew);
-      } else {
-        if (hm.lookup(target)) {sLog << " Aborting (trying) at <" << target << ">" << std::endl; abortNodeOrigin(target, ew); }
-        else throw std::runtime_error("Cannot execute command '" + g[v].type + "'. No valid cpu/thr provided and '" + target + "' is not a valid node name\n");
-      }
-      continue;
-    }
-
-
-    if (g[v].type == dnt::sCmdOrigin)   {
-      //Leave out for now and autocorrect cpu
-      //if (getNodeCpu(target, DOWNLOAD) != cpu) throw std::runtime_error("Command '" + g[v].name + "'s value for property '" + DotStr::Node::Prop::Base::sCpu + "' is invalid\n");try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
-      try { setThrOrigin(getNodeCpu(target, TransferDir::DOWNLOAD), thr, target, ew); } catch (std::runtime_error const& err) {
-        throw std::runtime_error("Cannot execute command '" + g[v].type + "', " + std::string(err.what()));
-      }
-      continue;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Local Commands (targeted at cmd queue of individual blocks)
-    // These operations need at least a write lock. Add it to the lock manager
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    BlockLock& lock = lm.add(target);
-
-    // lock all queues of a block
-    if (g[v].type == dnt::sCmdLock) {
-      lock.wr.set = true;
-      lock.rd.set = true;  
-
-    // async clear all queues
-    } else if (g[v].type == dnt::sCmdAsyncClear) {
-      blockAsyncClearQueues(target, ew);
-      lock.wr.set = true;
-      lock.wr.clr = true;
-      lock.rd.set = true;
-      lock.rd.clr = true;    
-      
-    // unlock all queues
-    } else if (g[v].type == dnt::sCmdUnlock) {
-      lock.wr.clr = true;
-      lock.rd.clr = true; 
-
-    // Commands targeted at cmd queue of individual blocks
-    } else if (g[v].type == dnt::sCmdNoop) {
-      uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
-      mc = (mc_ptr) new MiniNoop(cmdTvalid, cmdPrio, cmdQty );
-      lock.wr.set = true;
-      lock.wr.clr = true;
-
-    } else if (g[v].type == dnt::sCmdFlow) {
-      uint32_t cmdQty = s2u<uint32_t>(g[v].qty);
-      //sLog << " Flowing from <" << target << "> to <" << destination << ">, permanent defDest change='" << s2u<bool>(g[v].perma) << "'" << std::endl;
-      uint32_t adr = LM32_NULL_PTR;
-      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
-        throw std::runtime_error("Destination '" + destination + "'' invalid: " + std::string(err.what()));
-      }
-  
-      mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, s2u<bool>(g[v].perma) );
-      lock.wr.set = true;
-      lock.wr.clr = true;
-
-    } else if (g[v].type == dnt::sCmdFlush) { // << " Flushing <" << target << "> Queues IL " << s2u<int>(g[v].qIl) << " HI " << s2u<int>(g[v].qHi) << " LO " << s2u<int>(g[v].qLo) <<  std::endl;
-      uint32_t adr = LM32_NULL_PTR;
-      try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
-        // empty tag or invalid destination. We'll interpret this as no override desired.
-        adr = LM32_NULL_PTR;
-      }
-      mc = (mc_ptr) new MiniFlush(cmdTvalid, cmdPrio, s2u<bool>(g[v].qIl), s2u<bool>(g[v].qHi), s2u<bool>(g[v].qLo), adr, s2u<bool>(g[v].perma));
-      lock.wr.set = true;
-      lock.wr.clr = true; 
-
-    } else if (g[v].type == dnt::sCmdWait) {  
-      uint64_t cmdTwait  = s2u<uint64_t>(g[v].tWait);
-      mc = (mc_ptr) new MiniWait(cmdTvalid, cmdPrio, cmdTwait, false, false );
-      lock.wr.set = true;
-      lock.wr.clr = true;                                            
-    }
-    else { throw std::runtime_error("Command <" + g[v].name + ">'s type <" + g[v].type + "> is not supported!\n");}
-
-    //sLog << std::endl;
-    createCommand(target, cmdPrio, mc, ew);
-  }
+    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait);
+  }  
 
   return ew;
 
@@ -289,7 +325,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
   }
 
 
-  vEbwrs& CarpeDM::createCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew) {
+  vEbwrs& CarpeDM::createMiniCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew) {
 
     uint32_t cmdWrInc, hash;
     uint8_t b[_T_CMD_SIZE_ + _32b_SIZE_];
@@ -318,7 +354,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
     uint8_t opType = OP_TYPE_CMD_BASE + ((mc->getAct() >> ACT_TYPE_POS) & ACT_TYPE_MSK);
     if ((((mc->getAct() >> ACT_TYPE_POS) & ACT_TYPE_MSK) == ACT_TYPE_FLOW)
      && (boost::dynamic_pointer_cast<MiniFlow>(mc)->getDst() == LM32_NULL_PTR)) { opType = OP_TYPE_CMD_STOP; }
-
+    //FIMXE this should be done for all commands, not just the minis  
     createCmdModInfo(getNodeCpu(targetName, TransferDir::DOWNLOAD), 0, opType, ew);
 
     return ew;

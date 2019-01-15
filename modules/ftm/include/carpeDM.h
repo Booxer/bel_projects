@@ -156,8 +156,6 @@ private:
   vEbwrs& setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name, vEbwrs& ew); //Sets the Node the Thread will start from
   vEbwrs& setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew);
   vEbwrs& setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew);
-  vEbwrs& createCommandBurst(Graph& g, vEbwrs& ew);
-  vEbwrs& createCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew);
   vEbwrs& deactivateOrphanedCommands(std::vector<QueueReport>& vQr, vEbwrs& ew);
   vEbwrs& clearHealth(uint8_t cpuIdx, vEbwrs& ew);
   vEbwrs& resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew);
@@ -361,9 +359,14 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                bool isCpuIdxValid(uint8_t cpuIdx) {return ebd.isCpuIdxValid(cpuIdx);}
                void showMemSpace();
 
-
-
-
-};
+vEbwrs& processNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target);
+vEbwrs& processQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid);
+vEbwrs& processWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait );
+vEbwrs& processFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma);
+vEbwrs& processFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo);
+vEbwrs& processCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait);
+vEbwrs& processCommandBurst(vEbwrs& ew, Graph& g);
+vEbwrs& createMiniCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew);
+vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait );
 
 #endif
