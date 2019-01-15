@@ -203,14 +203,7 @@ public:
                 } //Open connection to a DM via Etherbone
                bool disconnect() {return ebd.disconnect();} //Close connection
                // SDB and DM HW detection Functions
-               bool isValidDMCpu(uint8_t cpuIdx);              // Check if CPU is registered as running a valid firmware
-  const std::string getFwIdROM(uint8_t cpuIdx);
-                int getFwVersion(const std::string& fwIdROM);  // Retrieve the Firmware Version of cpu at sdb dev array idx <cpuIdx>
-           uint32_t getIntBaseAdr(const std::string& fwIdROM); // mockup for now, this info should be taken from found firmware binary
-           uint32_t getSharedOffs(const std::string& fwIdROM);
-           uint32_t getSharedSize(const std::string& fwIdROM);
-                int getCpuQty()   const;                       // Return number of found CPUs (not necessarily valid ones!)
-               bool isCpuIdxValid(uint8_t cpuIdx);
+
 
 //Internal Hash and Groupstable ///////////////////////////////////////////////////////////////////////////////////////////////
                // Name/Hash Dict
@@ -343,7 +336,7 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void clearHealth(uint8_t cpuIdx);
                void clearHealth();
        QueueReport& getQReport(const std::string& blockName, QueueReport& qr);  // FIXME why reference in, reference out ? its not like you can add to this report ...
-           uint64_t getDmWrTime();
+           uint64_t getDmWrTime() {return ebd.getDmWrTime();}
     HwDelayReport& getHwDelayReport(HwDelayReport& hdr);
                void clearHwDiagnostics();
                void startStopHwDiagnostics(bool enable);
@@ -363,6 +356,12 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                std::vector<std::vector<uint64_t>> coverage3TestData(uint64_t seedStart, uint64_t cases, uint8_t parts, uint8_t percentage );
                Graph& getDownGraph(); //Returns the Download Graph for CPU <cpuIdx
                void dirtyCtShow() {ct.debug(sLog);}
+               void showCpuList() {return ebd.showCpuList();}
+               uint8_t getCpuQty() {return ebd.getCpuQty();}
+               bool isCpuIdxValid(uint8_t cpuIdx) {return ebd.isCpuIdxValid(cpuIdx);}
+               void showMemSpace();
+
+
 
 
 };

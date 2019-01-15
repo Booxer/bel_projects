@@ -1,5 +1,78 @@
 #include "common.h"
 
+
+template <typename T>
+std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B)
+{
+    std::vector<T> AB;
+    AB.reserve( A.size() + B.size() );                // preallocate memory
+    AB.insert( AB.end(), A.begin(), A.end() );        // add A;
+    AB.insert( AB.end(), B.begin(), B.end() );        // add B;
+    return AB;
+}
+
+template <typename T>
+std::vector<T> operator+(const std::vector<T> &A, const T &B)
+{
+    std::vector<T> AB = A;
+    AB.reserve( A.size() + 1 );                // preallocate memory
+    AB.insert( AB.end(), A.begin(), A.end() );
+    AB.push_back(B);
+    return AB;
+}
+
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B)
+{
+    A.reserve( A.size() + B.size() );                // preallocate memory without erase original data
+    A.insert( A.end(), B.begin(), B.end() );         // add B;
+    return A;                                        // here A could be named AB
+}
+
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &A, const T &B)
+{
+    A.push_back(B);
+    return A;
+}
+
+vEbwrs operator+(const vEbwrs &A, const vEbwrs &B)
+{
+    vEbwrs AB;
+    AB.va = A.va + B.va;
+    AB.vb = A.vb + B.vb;
+    AB.vcs = A.vcs + B.vcs;
+    return AB;
+}
+
+vEbwrs& operator+=(vEbwrs &A, const vEbwrs &B)
+{
+
+    A.va = A.va + B.va;
+    A.vb = A.vb + B.vb;
+    A.vcs = A.vcs + B.vcs;
+    return A;
+}
+
+vEbrds operator+(const vEbrds& A, const vEbrds &B)
+{
+    vEbrds AB;
+    AB.va = A.va + B.va;
+    AB.vcs = A.vcs + B.vcs;
+    return AB;
+}
+
+vEbrds& operator+=(vEbrds& A, const vEbrds &B)
+{
+
+    A.va = A.va + B.va;
+    A.vcs = A.vcs + B.vcs;
+    return A;
+}
+
+
+
+
 void hexDump (const char *desc, const char* addr, int len) {
     int i;
     unsigned char buff[17];

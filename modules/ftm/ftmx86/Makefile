@@ -66,7 +66,7 @@ carpeDM.o: $(SRCPATH)/carpeDM.cpp
 	$(T_CXX) $(T_CXXFLAGS) $(T_CXXFLAGS_CDM) -c $< -o $@ $(T_LIBS)
 
 %.o: 	$(SRCPATH)/%.cpp
-	$(T_CXX) $(T_CXXFLAGS) -c $< -o $@ $(T_LIBS)
+	$(T_CXX) $(T_CXXFLAGS) $(T_CXXFLAGS_CDM) -c $< -o $@ $(T_LIBS)
 
 %.o: 	$(LZMAPATH)/%.c
 	$(T_CC) $(T_CFLAGS) -fPIC -c $^ -o $@

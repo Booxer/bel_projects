@@ -85,7 +85,7 @@ boost::optional<std::pair<int, int>> CarpeDM::parseCpuAndThr(vertex_t v, Graph& 
       }
 
 
-  if ( (cpu < 0) || (cpu >= getCpuQty()) || (thr < 0) || (thr >= _THR_QTY_  ) ) {
+  if ( (cpu < 0) || (cpu >= ebd.getCpuQty()) || (thr < 0) || (thr >= _THR_QTY_  ) ) {
     //sLog << "OOR, returning none" << std::endl;
     return boost::optional<std::pair<int, int>>();
   }
@@ -439,7 +439,7 @@ vEbwrs& CarpeDM::createCommandBurst(Graph& g, vEbwrs& ew) {
     writeLeNumberToBeBytes<uint32_t>(b, (1 << _THR_QTY_)-1 );
 
 
-    for(uint8_t cpuIdx=0; cpuIdx < getCpuQty(); cpuIdx++) {
+    for(uint8_t cpuIdx=0; cpuIdx < ebd.getCpuQty(); cpuIdx++) {
       setThrStart(cpuIdx, 0, ew);
       ew.va.push_back(getThrCmdAdr(cpuIdx) + T_TC_ABORT);
       ew.vb.insert( ew.vb.end(), b, b + sizeof(b));
@@ -718,7 +718,7 @@ vertex_set_t CarpeDM::getAllCursors(bool activeOnly) {
   //TODO - this is dirty and cumbersome, make it streamlined
 
 
-  for(uint8_t cpu = 0; cpu < getCpuQty(); cpu++) { //cycle all CPUs
+  for(uint8_t cpu = 0; cpu < ebd.getCpuQty(); cpu++) { //cycle all CPUs
     for(uint8_t thr = 0; thr < _THR_QTY_; thr++) {
       uint32_t adr = ebd.read32b( getThrCurrentNodeAdr(cpu, thr));
       uint64_t  dl = getThrDeadline(cpu, thr);

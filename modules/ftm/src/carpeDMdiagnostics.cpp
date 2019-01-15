@@ -416,7 +416,7 @@ void CarpeDM::clearHealth(uint8_t cpuIdx) {
 
 void CarpeDM::clearHealth() {
   vEbwrs ew;
-  for(int cpuIdx = 0; cpuIdx < getCpuQty(); cpuIdx++) { clearHealth(cpuIdx, ew); }
+  for(int cpuIdx = 0; cpuIdx < ebd.getCpuQty(); cpuIdx++) { clearHealth(cpuIdx, ew); }
   ebd.writeCycle(ew.va, ew.vb, ew.vcs);
 }
 

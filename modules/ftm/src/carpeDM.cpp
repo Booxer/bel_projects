@@ -5,7 +5,7 @@
 #include <string>
 #include <inttypes.h>
 #include <boost/graph/graphviz.hpp>
-#include <boost/algorithm/string.hpp>
+//#include <boost/algorithm/string.hpp>
 #include <sys/time.h>
 
 #include "common.h"
@@ -158,11 +158,13 @@ vBuf CarpeDM::decompress(const vBuf& in) {return lzmaDecompress(in);}
 
 
 
-
-
-
- 
-
+  void CarpeDM::showMemSpace() {
+    for (uint8_t x = 0; x < ebd.getCpuQty(); x++) {
+      sLog << "Space" << std::setw(11) << "Free" << std::endl;
+      sLog << std::dec << std::setfill(' ') << std::setw(11) << atDown.getTotalSpace(x) << std::setw(10) << atDown.getFreeSpace(x) * 100 / atDown.getTotalSpace(x) << "%";
+      sLog << std::endl;
+    }
+  }
 
 
 

@@ -1,8 +1,7 @@
+#include <boost/algorithm/string.hpp>
 #include "ebwrapper.h"
-#include <etherbone.h>
 
-int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs)
-{
+int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs) const {
 
   //eb_status_t status;
   //FIXME What about MTU? What about returned eb status ??
@@ -37,7 +36,7 @@ int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb, const vBl& vcs)
 }
 
 
-int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb) {
+int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb) const {
   vBl vcs = leadingOne(va.size());
   checkWriteCycle(va, vb, vcs);
   return  writeCycle(va, vb, vcs);
@@ -45,8 +44,7 @@ int EbWrapper::writeCycle(const vAdr& va, const vBuf& vb) {
 
 
 
-vBuf EbWrapper::readCycle(const vAdr& va, const vBl& vcs)
-{
+vBuf EbWrapper::readCycle(const vAdr& va, const vBl& vcs) const {
   //FIXME What about MTU? What about returned eb status ??
 
   Cycle cyc;
@@ -83,44 +81,42 @@ vBuf EbWrapper::readCycle(const vAdr& va, const vBl& vcs)
   return ret;
 }
 
-vBuf EbWrapper::readCycle(const vAdr& va) {
+vBuf EbWrapper::readCycle(const vAdr& va) const {
   return  readCycle(va, leadingOne(va.size()));
 }
 
-int EbWrapper::write32b(uint32_t adr, uint32_t data)
-{
-  vAdr vA({adr});
-  vBuf vD;
-  writeLeNumberToBeBytes(vD, data);
-  vBl vcs = leadingOne(vA.size());
-  checkWriteCycle(vA, vD, vcs);
-  return writeCycle(vA, vD, vcs);
+int EbWrapper::write32b(uint32_t adr, uint32_t data) const {
+  vAdr va({adr});
+  vBuf vb;
+  writeLeNumberToBeBytes(vb, data);
+  vBl vcs = leadingOne(va.size());
+  checkWriteCycle(va, vb, vcs);
+  return writeCycle(va, vb, vcs);
 }
 
-uint32_t EbWrapper::read32b(uint32_t adr)
-{
+uint32_t EbWrapper::read32b(uint32_t adr) const {
   vAdr va({adr});
   vBl vcs = leadingOne(va.size());
-  checkReadCycle(va, vb, vcs);
+  checkReadCycle(va, vcs);
   vBuf vb = readCycle(va);
-  return writeBeBytesToLeNumber<uint32_t>(vD);
+  return writeBeBytesToLeNumber<uint32_t>(vb);
 }
 
  //Reads and returns a 64 bit word from DM
-uint64_t EbWrapper::read64b(uint32_t startAdr) {
-  vAdr vA({startAdr + 0, startAdr + _32b_SIZE_});
-  vBuf vD = readCycle(vA);
-  return writeBeBytesToLeNumber<uint64_t>(vD);
+uint64_t EbWrapper::read64b(uint32_t startAdr) const {
+  vAdr va({startAdr + 0, startAdr + _32b_SIZE_});
+  vBuf vb = readCycle(va);
+  return writeBeBytesToLeNumber<uint64_t>(vb);
 }
 
-int EbWrapper::write64b(uint32_t startAdr, uint64_t d) {
-  vBuf vD;
-  writeLeNumberToBeBytes(vD, d);
-  vAdr vA({startAdr + 0, startAdr + _32b_SIZE_});
-  vBl vcs = leadingOne(vA.size());
-  checkWriteCycle(vA, vD, vcs);
+int EbWrapper::write64b(uint32_t startAdr, uint64_t d) const {
+  vBuf vb;
+  writeLeNumberToBeBytes(vb, d);
+  vAdr va({startAdr + 0, startAdr + _32b_SIZE_});
+  vBl vcs = leadingOne(va.size());
+  checkWriteCycle(va, vb, vcs);
 
-  return writeCycle(vA, vD, vcs);
+  return writeCycle(va, vb, vcs);
 
 }
 
@@ -128,16 +124,11 @@ int EbWrapper::write64b(uint32_t startAdr, uint64_t d) {
 bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atDown) {
     bool  ret = false;
     uint8_t mappedIdx = 0;
-    int expVersion = parseFwVersionString(EXP_VER), foundVersion;
     int foundVersionMax = -1;
-
-    if (expVersion <= 0) {throw std::runtime_error("Bad required minimum firmware version string received from Makefile"); return false;}
-
 
     cpuIdxMap.clear();
     cpuDevs.clear();
-
-    vFw.clear();
+    vFoundVersion.clear();
     vFwIdROM.clear();
 
     if(verbose) sLog << "Connecting to " << en << "... ";
@@ -153,17 +144,13 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
       if (cpuDevs.size() >= 1) {
         cpuQty = cpuDevs.size();
 
-
         for(int cpuIdx = 0; cpuIdx< cpuQty; cpuIdx++) {
           //only create MemUnits for valid DM CPUs, generate Mapping so we can still use the cpuIdx supplied by User
           vFwIdROM[cpuIdx] = getFwIdROM(cpuIdx);
-          foundVersion = getFwVersion(fwIdROM[cpuIdx]);
+          int foundVersion = getFwVersion(vFwIdROM[cpuIdx]);
           foundVersionMax = foundVersionMax < foundVersion ? foundVersion : foundVersionMax;
-          vFw.push_back(foundVersion);
-          int expVersionMin = expVersion;
-          int expVersionMax = (expVersion / (int)FwId::VERSION_MAJOR_MUL) * (int)FwId::VERSION_MAJOR_MUL
-                             + 99 * (int)FwId::VERSION_MINOR_MUL
-                             + 99 * (int)FwId::VERSION_REVISION_MUL;
+          vFoundVersion.push_back(foundVersion);
+
 
           if ( (foundVersion >= expVersionMin) && (foundVersion <= expVersionMax) ) {
             //FIXME check for consequent use of cpu index map!!! I'm sure there'll be absolute chaos throughout the lib if CPUs indices were not continuous
@@ -175,7 +162,7 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
             uint32_t rawSize      = cpuDevs[cpuIdx].sdb_component.addr_last - cpuDevs[cpuIdx].sdb_component.addr_first;
             uint32_t sharedOffs   = getSharedOffs(vFwIdROM[cpuIdx]);
             uint32_t space        = getSharedSize(vFwIdROM[cpuIdx]) - _SHCTL_END_;
-
+//FIXME is this a good idea to do this here ??
               atUp.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             atDown.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             mappedIdx++;
@@ -196,9 +183,9 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
     }
 
     if(verbose) {
-      sLog << " Done."  << std::endl << "Found " << getCpuQty() << " Cores, " << cpuIdxMap.size() << " of them run a valid DM firmware." << std::endl;
+      sLog << " Done."  << std::endl << "Found " << cpuQty << " Cores, " << cpuIdxMap.size() << " of them run a valid DM firmware." << std::endl;
     }
-    std::string fwCause = foundVersionMax == -1 ? "" : "Requires FW v" + createFwVersionString(expVersion) + ", found " + createFwVersionString(foundVersionMax);
+    std::string fwCause = foundVersionMax == -1 ? "" : "Requires FW v" + createFwVersionString(expVersionMin) + ", found " + createFwVersionString(foundVersionMax);
     if (cpuIdxMap.size() == 0) {throw std::runtime_error("No CPUs running a valid DM firmware found. " + fwCause);}
 
 
@@ -226,9 +213,6 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
   }
 
 
-
- 
-
   uint64_t EbWrapper::getDmWrTime() const {
     /* get time from Cluster Time Module (ECA Time with or wo ECA) */
     uint64_t wrTime;
@@ -241,7 +225,7 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
         cyc.open(ebd);
         cyc.read( cluTimeAddr + CluTime::timeHiW, EB_BIG_ENDIAN|EB_DATA32, &nsHi);
         cyc.read( cluTimeAddr + CluTime::timeLoW, EB_BIG_ENDIAN|EB_DATA32, &nsLo);
-        cyc.close(ebd);
+        cyc.close();
       } catch (etherbone::exception_t const& ex) {
         throw std::runtime_error("Etherbone " + std::string(ex.method) + " returned " + std::string(eb_status(ex.status)) + "\n" );
       }
@@ -254,36 +238,16 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
     return wrTime;
   }
 
-void EbWrapper::showCpuList() {
-  int expVersionMin = parseFwVersionString(EXP_VER);
-  int expVersionMax = (expVersionMin / (int)FwId::VERSION_MAJOR_MUL) * (int)FwId::VERSION_MAJOR_MUL
-                   + 99 * (int)FwId::VERSION_MINOR_MUL
-                   + 99 * (int)FwId::VERSION_REVISION_MUL;
-
-  sLog << std::endl << std::setfill(' ') << std::setw(5) << "CPU" << std::setfill(' ') << std::setw(11) << "FW found"
-       << std::setfill(' ') << std::setw(11) << "Min" << std::setw(11) << "Max" << std::setw(11) << "Space" << std::setw(11) << "Free" << std::endl;
-  for (int x = 0; x < cpuQty; x++) {
-
-    sLog << std::dec << std::setfill(' ') << std::setw(5) << x << std::setfill(' ') << std::setw(11) << createFwVersionString(vFw[x])
-                                                                       << std::setfill(' ') << std::setw(11) << createFwVersionString(expVersionMin)
-                                                                       << std::setfill(' ') << std::setw(11) << createFwVersionString(expVersionMax);
-
-    sLog << std::dec << std::setfill(' ') << std::setw(11) << atDown.getTotalSpace(x) << std::setw(10) << atDown.getFreeSpace(x) * 100 / atDown.getTotalSpace(x) << "%";
-    sLog << std::endl;
-  }
-
-}
-
 
     //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
-  const std::string EbWrapper::getFwIdROM(uint8_t cpuIdx) {
+  std::string EbWrapper::getFwIdROM(uint8_t cpuIdx) const {
     //FIXME replace with FW ID string constants
     const std::string tagMagic      = "UserLM32";
     const std::string tagProject    = "Project     : ";
     const std::string tagExpName    = "ftm";
     std::string version;
     size_t pos;
-    struct  sdb_device& ram = cpuDevs.at(cpuIdx);
+    const struct sdb_device& ram = cpuDevs.at(cpuIdx);
     vAdr fwIdAdr;
     //FIXME get rid of SHARED_OFFS somehow and replace with an end tag and max limit
     for (uint32_t adr = ram.sdb_component.addr_first + BUILDID_OFFS; adr < ram.sdb_component.addr_first + BUILDID_OFFS + BUILDID_SIZE; adr += 4) fwIdAdr.push_back(adr);
@@ -300,7 +264,7 @@ void EbWrapper::showCpuList() {
     return s;
   }
 
-    const std::string EbWrapper::createFwVersionString(const int fwVer) {
+   std::string EbWrapper::createFwVersionString(const int fwVer) const {
 
     unsigned int fwv = (unsigned int)fwVer;
     std::string ret;
@@ -315,12 +279,9 @@ void EbWrapper::showCpuList() {
   }
 
 
-  int EbWrapper::parseFwVersionString(const std::string& s) {
-
+  int EbWrapper::parseFwVersionString(const std::string& s) const {
     int verMaj, verMin, verRev;
     std::vector<std::string> x;
-
-
 
     try { boost::split(x, s, boost::is_any_of(".")); } catch (...) {};
     if (x.size() != 3) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
@@ -331,14 +292,10 @@ void EbWrapper::showCpuList() {
 
     if (verMaj < 0 || verMaj > 99 || verMin < 0 || verMin > 99 || verRev < 0 || verRev > 99) {return (int)FwId::FWID_BAD_VERSION_FORMAT;}
     else {return verMaj * (int)FwId::VERSION_MAJOR_MUL + verMin * (int)FwId::VERSION_MINOR_MUL  + verRev * (int)FwId::VERSION_REVISION_MUL;}
-
-
   }
 
-
-
   //returns firmware version as int <xxyyzz> (x Major Version, y Minor Version, z Revison; negative values for error codes)
-  int EbWrapper::getFwVersion(const std::string& fwIdROM) {
+  int EbWrapper::getFwVersion(const std::string& fwIdROM) const {
     //FIXME replace with FW ID string constants
     //get Version string xx.yy.zz
 
@@ -350,7 +307,7 @@ void EbWrapper::showCpuList() {
   }
 
 
-  const std::string EbWrapper::readFwIdROMTag(const std::string& fwIdROM, const std::string& tag, size_t maxlen, bool stopAtCr ) {
+  std::string EbWrapper::readFwIdROMTag(const std::string& fwIdROM, const std::string& tag, size_t maxlen, bool stopAtCr ) const {
     size_t pos, posEnd, tmp;
     std::string s = fwIdROM;
 
@@ -367,26 +324,37 @@ void EbWrapper::showCpuList() {
 
 
 
-   uint32_t EbWrapper::getIntBaseAdr(const std::string& fwIdROM) {
+   uint32_t EbWrapper::getIntBaseAdr(const std::string& fwIdROM) const {
     //FIXME replace with FW ID string constants
     //CAREFUL: Get the EXACT position. If you miss out on leading spaces, the parsed number gets truncated!
-    std::string value = ebd.readFwIdROMTag(fwIdROM, "IntAdrOffs  : ", 10, true);
+    std::string value = readFwIdROMTag(fwIdROM, "IntAdrOffs  : ", 10, true);
     //sLog << "IntAdrOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
     return s2u<uint32_t>(value);
 
   }
 
-  uint32_t EbWrapper::getSharedOffs(const std::string& fwIdROM) {
+  uint32_t EbWrapper::getSharedOffs(const std::string& fwIdROM) const {
     //FIXME replace with FW ID string constants
-    std::string value = ebd.readFwIdROMTag(fwIdROM, "SharedOffs  : ", 10, true);
+    std::string value = readFwIdROMTag(fwIdROM, "SharedOffs  : ", 10, true);
     //sLog << "Parsing SharedOffs : " << value << " parsed: 0x" << std::hex << s2u<uint32_t>(value) << std::endl;
     return s2u<uint32_t>(value);
 
   }
 
-  uint32_t EbWrapper::getSharedSize(const std::string& fwIdROM){
-    std::string value = ebd.readFwIdROMTag(fwIdROM, "SharedSize  : ", 10, true);
+  uint32_t EbWrapper::getSharedSize(const std::string& fwIdROM) const{
+    std::string value = readFwIdROMTag(fwIdROM, "SharedSize  : ", 10, true);
     //sLog << "SharedSize : " << value << " parsed: "  << std::dec << s2u<uint32_t>(value) << std::endl;
     return s2u<uint32_t>(value);
 
+  }
+
+  void EbWrapper::showCpuList() const {
+    sLog << std::endl << std::setfill(' ') << std::setw(5) << "CPU" << std::setfill(' ') << std::setw(11) << "FW found"
+         << std::setfill(' ') << std::setw(11) << "Min" << std::setw(11) << "Max" << std::setw(11)  << std::endl;
+    for (int x = 0; x < cpuQty; x++) {
+  
+      sLog << std::dec << std::setfill(' ') << std::setw(5) << x << std::setfill(' ') << std::setw(11) << getFwVersionString(x)
+           << std::setfill(' ') << std::setw(11) << createFwVersionString(getExpVersionMin())
+           << std::setfill(' ') << std::setw(11) << createFwVersionString(getExpVersionMax());
+    }
   }

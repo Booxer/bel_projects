@@ -222,42 +222,6 @@ typedef struct {
 
 vBl leadingOne(size_t length);
 
-template <typename T>
-std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B)
-{
-    std::vector<T> AB;
-    AB.reserve( A.size() + B.size() );                // preallocate memory
-    AB.insert( AB.end(), A.begin(), A.end() );        // add A;
-    AB.insert( AB.end(), B.begin(), B.end() );        // add B;
-    return AB;
-}
-
-template <typename T>
-std::vector<T> operator+(const std::vector<T> &A, const T &B)
-{
-    std::vector<T> AB = A;
-    AB.reserve( A.size() + 1 );                // preallocate memory
-    AB.insert( AB.end(), A.begin(), A.end() );
-    AB.push_back(B);
-    return AB;
-}
-
-template <typename T>
-std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B)
-{
-    A.reserve( A.size() + B.size() );                // preallocate memory without erase original data
-    A.insert( A.end(), B.begin(), B.end() );         // add B;
-    return A;                                        // here A could be named AB
-}
-
-template <typename T>
-std::vector<T> &operator+=(std::vector<T> &A, const T &B)
-{
-    A.push_back(B);
-    return A;
-}
-
-//TODO oh for fucks sake, implement a version of writeLeNumberToBeBytes that writes to a vBuf !!!
 template<typename T>
 inline void writeLeNumberToBeBytes(uint8_t* pB, T val) {
   T x = endian_reverse(val);
@@ -280,6 +244,12 @@ inline void writeLeNumberToBeBytes(vBuf& vB, T val) {
 
 template<typename T>
 inline T writeBeBytesToLeNumber(uint8_t* pB) {
+  return endian_reverse(*((T*)pB));
+}
+
+template<typename T>
+inline T writeBeBytesToLeNumber(vBuf& vB) {
+  uint8_t* pB = (uint8_t*)&vB[0];
   return endian_reverse(*((T*)pB));
 }
 
@@ -314,39 +284,18 @@ void hexDump (const char *desc, vBuf vb);
 
 std::string fixArchiveVersion(const std::string& s);
 
+template <typename T>
+std::vector<T> operator+(const std::vector<T> &A, const std::vector<T> &B);
+template <typename T>
+std::vector<T> operator+(const std::vector<T> &A, const T &B);
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &A, const std::vector<T> &B);
+template <typename T>
+std::vector<T> &operator+=(std::vector<T> &A, const T &B);
 
-vEbwrs operator+(const vEbwrs &A, const vEbwrs &B)
-{
-    vEbwrs AB;
-    AB.va = A.va + B.va;
-    AB.vb = A.vb + B.vb;
-    AB.vcs = A.vcs + B.vcs;
-    return AB;
-}
-
-vEbwrs& operator+=(vEbwrs &A, const vEbwrs &B)
-{
-
-    A.va = A.va + B.va;
-    A.vb = A.vb + B.vb;
-    A.vcs = A.vcs + B.vcs;
-    return A;
-}
-
-vEbrds operator+(const vEbrds& A, const vEbrds &B)
-{
-    vEbrds AB;
-    AB.va = A.va + B.va;
-    AB.vcs = A.vcs + B.vcs;
-    return AB;
-}
-
-vEbrds& operator+=(vEbrds& A, const vEbrds &B)
-{
-
-    A.va = A.va + B.va;
-    A.vcs = A.vcs + B.vcs;
-    return A;
-}
+vEbwrs operator+(const vEbwrs &A, const vEbwrs &B);
+vEbwrs& operator+=(vEbwrs &A, const vEbwrs &B);
+vEbrds operator+(const vEbrds& A, const vEbrds &B);
+vEbrds& operator+=(vEbrds& A, const vEbrds &B);
 
 #endif
