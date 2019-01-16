@@ -133,6 +133,9 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
       return ew;
     }
 
+    //FIMXE hack to test compile
+    uint8_t thr = 0;
+
     if (type == dnt::sCmdOrigin)   {
       //Leave out for now and autocorrect cpu
       try { setThrOrigin(getNodeCpu(target, TransferDir::DOWNLOAD), thr, target, ew); } catch (std::runtime_error const& err) {
@@ -210,34 +213,34 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
 
 //convenience wrappers
 //commands with no extras
-vEbwrs& processNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target) {
-  processCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false);
+vEbwrs& CarpeDM::createNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target) {
+  return createCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false);
 }
 
 //commands with time
-vEbwrs& processQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid) {
-  return processCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, 0, false);
+vEbwrs& CarpeDM::createQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid) {
+  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, 0, false);
 }
   
 //flows
-vEbwrs& processFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+vEbwrs& CarpeDM::createFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma) {
-  return processCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, false, false, false, 0, false);
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, false, false, false, 0, false);
 } 
 
 //flush or flush override
-vEbwrs& processFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+vEbwrs& CarpeDM::createFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo) {
-  return processCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, false, qIl, qHi, qLo, 0, false);
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, false, qIl, qHi, qLo, 0, false);
 } 
 
 //wait
-vEbwrs& processWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target,  
+vEbwrs& CarpeDM::createWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target,  
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait ) {
-  return processCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, cmdTwait, abswait);
+  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, cmdTwait, abswait);
 }
 
-vEbwrs& CarpeDM::processCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
+vEbwrs& CarpeDM::createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait)
 {
   updateModTime();
@@ -249,7 +252,7 @@ vEbwrs& CarpeDM::processCommand(vEbwrs& ew, const std::string& type, const std::
 
 
 
-vEbwrs& CarpeDM::processCommandBurst(vEbwrs& ew, Graph& g) {
+vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
 
   lm.clear();
  
@@ -263,7 +266,7 @@ vEbwrs& CarpeDM::processCommandBurst(vEbwrs& ew, Graph& g) {
   BOOST_FOREACH( vertex_t v, vertices(g) ) {
 
     std::string target, destination, type;
-    bool qIl, qHi, qLo, perma, vabs;
+    bool qIl, qHi, qLo, perma, vabs, abswait;
     uint64_t cmdTvalid, cmdTwait;
     uint32_t cmdQty;
     uint8_t cmdPrio;
@@ -288,14 +291,16 @@ vEbwrs& CarpeDM::processCommandBurst(vEbwrs& ew, Graph& g) {
     cmdQty    = s2u<uint32_t>(g[v].qty);
     cmdTvalid = s2u<uint64_t>(g[v].tValid);
     cmdTwait  = s2u<uint64_t>(g[v].tWait);
-    qIl       = s2u<bool>(g[v].qIl)
-    qHi       = s2u<bool>(g[v].qHi)
-    qLo       = s2u<bool>(g[v].qLo)
+    qIl       = s2u<bool>(g[v].qIl);
+    qHi       = s2u<bool>(g[v].qHi);
+    qLo       = s2u<bool>(g[v].qLo);
     perma     = s2u<bool>(g[v].perma);
+    //fixme hack to test compile
+    abswait   = false;
   
     if(verbose) sLog << "Command <" << g[v].name << ">, type <" << g[v].type << ">" << std::endl;
 
-    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait);
+    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait);
   }  
 
   return ew;
@@ -695,10 +700,8 @@ vEbwrs& CarpeDM::startNodeOrigin(const std::string& sNode, vEbwrs& ew) {
 
 //Requests stop at node <sNode> (flow to idle)
 vEbwrs& CarpeDM::stopNodeOrigin(const std::string& sNode, vEbwrs& ew) {
-  mc_ptr mc = (mc_ptr) new MiniFlow(0, PRIO_LO, 1, getNodeAdr(DotStr::Node::Special::sIdle, TransferDir::DOWNLOAD, AdrType::INT), false );
   //send a command: tell patternExitNode to change the flow to Idle
-  return createCommand(sNode, PRIO_LO, mc, ew);
-
+  return createFlowCommand(ew, dnt::sCmdFlow, sNode, DotStr::Node::Special::sIdle, PRIO_LO, 1, true, 0, false);
 }
 
 //Immediately aborts the thread whose pattern <sNode> belongs to
@@ -781,10 +784,10 @@ vertex_set_t CarpeDM::getAllCursors(bool activeOnly) {
 }
 
 
-int CarpeDM::staticFlushPattern(const std::string& sPattern, bool prioIl, bool prioHi, bool prioLo, bool force) {
+int CarpeDM::staticFlushPattern(const std::string& sPattern, bool prioIl, bool prioHi, bool prioLo, vEbwrs& ew, bool force) {
   Graph& g = gDown;
   AllocTable& at = atDown;
-  vEbwrs ew;
+
 
   bool found = false;
 
@@ -801,8 +804,8 @@ int CarpeDM::staticFlushPattern(const std::string& sPattern, bool prioIl, bool p
   return ew.va.size();
 }
 
-int CarpeDM::staticFlushBlock(const std::string& sBlock, bool prioIl, bool prioHi, bool prioLo, bool force) {
-  vEbwrs ew;
+int CarpeDM::staticFlushBlock(const std::string& sBlock, bool prioIl, bool prioHi, bool prioLo, vEbwrs& ew, bool force) {
+
   send(staticFlush(sBlock, prioIl, prioHi, prioLo, ew, force));
   return ew.va.size();
 }

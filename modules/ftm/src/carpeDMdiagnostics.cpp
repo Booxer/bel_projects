@@ -713,9 +713,11 @@ void CarpeDM::coverage3Upload(uint64_t seed ) {
   //writeDownDotFile("coverage.dot", false);
 
   coverage3GenerateDynamic(gCmd, seed );
-  send(createCommandBurst(gCmd, tmpWr));
-  setThrOrigin(0, 0, coverage3GenerateCursor(g, seed));
+  createCommandBurst(tmpWr, gCmd);
+  setThrOrigin(0, 0, coverage3GenerateCursor(g, seed),tmpWr);
   forceThrCursor(0, 0);
+  send(tmpWr);
+
   download();
 
 

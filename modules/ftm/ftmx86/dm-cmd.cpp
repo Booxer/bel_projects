@@ -418,6 +418,8 @@ int main(int argc, char* argv[]) {
 
   cdm.updateModTime();
 
+  vEbwrs ew;
+
   // The global hard abort commands are special - they must work regardless if the schedule download/parse was successful or not
   if (typeName != NULL ) {
 
@@ -426,8 +428,8 @@ int main(int argc, char* argv[]) {
     if (tmpGlobalCmds == dnt::sCmdAbort)  {
       if( targetName != NULL) {
         uint32_t bits = strtol(targetName, NULL, 0);
-       cdm.setThrAbort(cpuIdx, bits & ((1<<_THR_QTY_)-1) );
-      } else { cdm.abortThr(cpuIdx, thrIdx); }
+       cdm.setThrAbort(cpuIdx, bits & ((1<<_THR_QTY_)-1) , ew );
+      } else { cdm.abortThr(cpuIdx, thrIdx, ew); }
       return 0;
     }
     else if (tmpGlobalCmds == "halt")  {
@@ -462,9 +464,7 @@ int main(int argc, char* argv[]) {
 
 
 
-  vAdr cmdAdrs;
-  vBuf cmdData;
-  vEbwrs ew;
+
 
   //check if we got a dot full of commands and send if so
   if (cmdFilename != NULL) {
@@ -489,7 +489,7 @@ int main(int argc, char* argv[]) {
 
     if      (cmp == dnt::sCmdNoop)  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
-      cdm.processQCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0);
+      cdm.createQCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0);
     }
     else if (cmp == "status")  {
       showStatus(netaddress, cdm, verbose);
@@ -506,38 +506,38 @@ int main(int argc, char* argv[]) {
       std::string toNode   = (para == DotStr::Node::Special::sIdle ) ? DotStr::Node::Special::sIdle : cdm.getPatternEntryNode(para);
 
       if ( cdm.isInHashDict( fromNode ) && ( (toNode == DotStr::Node::Special::sIdle ) || cdm.isInHashDict( toNode )  )) {
-        cdm.processFlowCommand(ew, cmp, fromNode, toNode, cmdPrio, cmdQty, true, 0, permanent);
+        cdm.createFlowCommand(ew, cmp, fromNode, toNode, cmdPrio, cmdQty, true, 0, permanent);
       } else {std::cerr << program << ": Destination Node '" << toNode << "'' was not found on DM" << std::endl; return -1; }
       targetName = fromNode.c_str();
     }
     else if (cmp == dnt::sCmdFlow)  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if ((para != NULL) && ((para == DotStr::Node::Special::sIdle ) || cdm.isInHashDict( para))) {
-        cdm.processFlowCommand(ew, cmp, targetName, para, cmdPrio, cmdQty, true, 0, permanent);
+        cdm.createFlowCommand(ew, cmp, targetName, para, cmdPrio, cmdQty, true, 0, permanent);
       } else {std::cerr << program << ": Destination Node '" << para << "'' was not found on DM" << std::endl; return -1; }
     }
     else if (cmp == "relwait")  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if (para == NULL) {std::cerr << program << ": Wait time in ns is missing" << std::endl; return -1; }
-      cdm.processWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), false);
+      cdm.createWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), false);
     }
     else if (cmp == "abswait")  {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if (para == NULL) {std::cerr << program << ": Wait time in ns is missing" << std::endl; return -1; }
-      cdm.processWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), true);
+      cdm.createWaitCommand(ew, cmp, targetName, cmdPrio, cmdQty, true, 0, strtoll(para, NULL, 0), true);
     }
     else if (cmp == dnt::sCmdFlush) {
         if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
         if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
         uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
-        processFlushCommand(ew, cmp, targetName, "", cmdPrio, cmdQty, true, 0, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1));
+        cdm.createFlushCommand(ew, cmp, targetName, "", cmdPrio, cmdQty, true, 0, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1));
     }
     else if (cmp == "staticflush") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
       uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
       try {
-          cdm.staticFlushBlock(targetName, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1), force);
+          cdm.staticFlushBlock(targetName, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1), ew , force);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not statically flush " << targetName << ". Cause: " << err.what() << std::endl;
         }
@@ -547,7 +547,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == "lock") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          processNonQCommand(ew, cmp, targetName);
+          cdm.createNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not lock block " << targetName << ". Cause: " << err.what() << std::endl;
         }
@@ -557,7 +557,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == "asyncflush") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          processNonQCommand(ew, cmp, targetName);
+          cdm.createNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not clear block " << targetName << "'s queues. Cause: " << err.what() << std::endl;
         }
@@ -566,7 +566,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == "unlock") {
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
-          processNonQCommand(ew, cmp, targetName);
+          cdm.createNonQCommand(ew, cmp, targetName);
         } catch (std::runtime_error const& err) {
           std::cerr << program << ": Could not unlock block " << targetName << ". Cause: " << err.what() << std::endl;
         }
@@ -595,7 +595,7 @@ int main(int argc, char* argv[]) {
     else if (cmp == dnt::sCmdOrigin)  {
       if( targetName != NULL) {
         if(!(cdm.isInHashDict( targetName)) && targetName != DotStr::Node::Special::sIdle) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
-        cdm.setThrOrigin(cpuIdx, thrIdx, targetName);
+        cdm.setThrOrigin(cpuIdx, thrIdx, targetName, ew);
       }
       if( verbose | (targetName == NULL) ) { std::cout << "CPU " << cpuIdx << " Thr " << thrIdx << " origin points to node " << cdm.getThrOrigin(cpuIdx, thrIdx) << std::endl;}
       return 0;
@@ -626,11 +626,11 @@ int main(int argc, char* argv[]) {
             if ((origin == DotStr::Node::Special::sIdle) || (origin == DotStr::Misc::sUndefined)) {std::cerr << program << ": Cannot start, origin of CPU " << cpuIdx << "'s thread " << thrIdx << " is not a valid node" << std::endl; return -1;}
          }
         }
-        cdm.setThrStart(cpuIdx, bits & ((1<<_THR_QTY_)-1) );
+        cdm.setThrStart(cpuIdx, bits & ((1<<_THR_QTY_)-1), ew );
       } else {
         origin = cdm.getThrOrigin(cpuIdx, thrIdx);
         if ((origin == DotStr::Node::Special::sIdle) || (origin == DotStr::Misc::sUndefined)) {std::cerr << program << ": Cannot start, origin of CPU " << cpuIdx << "'s thread " << thrIdx << " is not a valid node" << std::endl; return -1;}
-        cdm.startThr(cpuIdx, thrIdx);
+        cdm.startThr(cpuIdx, thrIdx, ew);
       }
       return 0;
     }
@@ -638,32 +638,26 @@ int main(int argc, char* argv[]) {
       if (targetName == NULL) {std::cerr << program << ": expected name of target node" << std::endl; return -1; }
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
 
-        uint32_t adr;
-        try {
-          adr = cdm.getNodeAdr(DotStr::Node::Special::sIdle , TransferDir::DOWNLOAD, AdrType::INT);
-        } catch (std::runtime_error const& err) {
-          std::cerr << program << ": Could not obtain address of destination node " << para << ". Cause: " << err.what() << std::endl;
-        }
-        mc = (mc_ptr) new MiniFlow(cmdTvalid, cmdPrio, cmdQty, adr, permanent );
+        cdm.stopNodeOrigin(targetName,ew);
 
     }
     else if (cmp == "startpattern")  {
       //check if a valid origin was assigned before executing
       if( targetName != NULL) {
-        cdm.startPattern(targetName, thrIdx );
+        cdm.startPattern(targetName, thrIdx, ew );
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
       return 0;
     }
     else if (cmp == "stoppattern")  {
       if( targetName != NULL) {
-        cdm.stopPattern(targetName);
+        cdm.stopPattern(targetName,ew);
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
       return 0;
 
     }
     else if (cmp == "abortpattern")  {
       if( targetName != NULL) {
-        cdm.abortPattern(targetName);
+        cdm.abortPattern(targetName,ew);
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
       return 0;
     }
@@ -671,7 +665,7 @@ int main(int argc, char* argv[]) {
       if( targetName != NULL) {
         if (para == NULL) {std::cerr << program << ": Queues to be flushed are missing, require 3 bit as hex (IL HI LO 0x0 - 0x7)" << std::endl; return -1; }
         uint32_t queuePrio = strtol(para, NULL, 0) & 0x7;
-        cdm.staticFlushPattern(targetName, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1), force);
+        cdm.staticFlushPattern(targetName, (bool)(queuePrio >> PRIO_IL & 1), (bool)(queuePrio >> PRIO_HI & 1), (bool)(queuePrio >> PRIO_LO & 1), ew , force);
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
       return 0;
     }
@@ -693,12 +687,12 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     else if (cmp == "starttime")  {
-      if( targetName != NULL) { cdm.setThrStartTime(cpuIdx, thrIdx, strtoll(targetName, NULL, 0)); }
+      if( targetName != NULL) { cdm.setThrStartTime(cpuIdx, thrIdx, strtoll(targetName, NULL, 0), ew); }
       else { std::cout << "CPU " << cpuIdx << " Thr " << thrIdx << " Starttime " << cdm.getThrStartTime(cpuIdx, thrIdx) << std::endl; }
       return 0;
     }
     else if (cmp == "preptime")  {
-      if( targetName != NULL) { cdm.setThrPrepTime(cpuIdx, thrIdx, strtoll(targetName, NULL, 0)); }
+      if( targetName != NULL) { cdm.setThrPrepTime(cpuIdx, thrIdx, strtoll(targetName, NULL, 0), ew); }
       else { std::cout << "CPU " << cpuIdx << " Thr " << thrIdx << " Preptime " << cdm.getThrPrepTime(cpuIdx, thrIdx) << std::endl; }
       return 0;
     }
