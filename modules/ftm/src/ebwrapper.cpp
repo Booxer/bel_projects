@@ -122,35 +122,45 @@ int EbWrapper::write64b(uint32_t startAdr, uint64_t d) const {
 
 
 bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atDown) {
+  
     bool  ret = false;
+    ebdevname = en;
+    
     uint8_t mappedIdx = 0;
     int foundVersionMax = -1;
-
+    
     cpuIdxMap.clear();
     cpuDevs.clear();
     vFoundVersion.clear();
     vFwIdROM.clear();
 
-    if(verbose) sLog << "Connecting to " << en << "... ";
+    if(verbose) sLog << "Connecting to " << ebdevname << "... ";
+   
     try {
       ebs.open(0, EB_DATAX|EB_ADDRX);
       ebd.open(ebs, ebdevname.c_str(), EB_DATAX|EB_ADDRX, 3);
+      
+
       ebd.sdb_find_by_identity(CluTime::vendID, CluTime::devID, cluTimeDevs);
       if (cluTimeDevs.size() < 1) throw std::runtime_error("Could not find Cluster Time Module on DM (needed for WR time). Something is wrong\n");
 
       ebd.sdb_find_by_identity(SDB_VENDOR_GSI,SDB_DEVICE_DIAG, diagDevs);
 
       ebd.sdb_find_by_identity(SDB_VENDOR_GSI,SDB_DEVICE_LM32_RAM, cpuDevs);
+
       if (cpuDevs.size() >= 1) {
         cpuQty = cpuDevs.size();
 
         for(int cpuIdx = 0; cpuIdx< cpuQty; cpuIdx++) {
           //only create MemUnits for valid DM CPUs, generate Mapping so we can still use the cpuIdx supplied by User
-          vFwIdROM[cpuIdx] = getFwIdROM(cpuIdx);
+          
+          vFwIdROM.push_back(getFwIdROM(cpuIdx));
+          
           int foundVersion = getFwVersion(vFwIdROM[cpuIdx]);
+          
           foundVersionMax = foundVersionMax < foundVersion ? foundVersion : foundVersionMax;
           vFoundVersion.push_back(foundVersion);
-
+          
 
           if ( (foundVersion >= expVersionMin) && (foundVersion <= expVersionMax) ) {
             //FIXME check for consequent use of cpu index map!!! I'm sure there'll be absolute chaos throughout the lib if CPUs indices were not continuous
@@ -162,20 +172,17 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
             uint32_t rawSize      = cpuDevs[cpuIdx].sdb_component.addr_last - cpuDevs[cpuIdx].sdb_component.addr_first;
             uint32_t sharedOffs   = getSharedOffs(vFwIdROM[cpuIdx]);
             uint32_t space        = getSharedSize(vFwIdROM[cpuIdx]) - _SHCTL_END_;
-//FIXME is this a good idea to do this here ??
+
               atUp.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             atDown.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             mappedIdx++;
           }
-          /*
-          sLog << "#" << (int)cpuIdx << " Shared Offset 0x" << std::hex <<  atDown.getMemories()[cpuIdx].sharedOffs << std::endl;
-          sLog << "#" << (int)cpuIdx << " BmpSize 0x" << std::hex <<  atDown.getMemories()[cpuIdx].bmpSize << std::endl;
-          sLog << "#" << (int)cpuIdx << " SHCTL 0x" << std::hex <<  _SHCTL_END_ << std::endl;
-          sLog << "#" << (int)cpuIdx << " Start Offset 0x" << std::hex <<  atDown.getMemories()[cpuIdx].startOffs << std::endl;
-          */
+          
+       
         }
         ret = true;
       }
+      
     } catch (etherbone::exception_t const& ex) {
       throw std::runtime_error("Etherbone " + std::string(ex.method) + " returned " + std::string(eb_status(ex.status)) + "\n" );
     } catch(...) {
@@ -247,20 +254,23 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
     const std::string tagExpName    = "ftm";
     std::string version;
     size_t pos;
+    std::cout << "trying to extra id rom" << std::endl;
     const struct sdb_device& ram = cpuDevs.at(cpuIdx);
     vAdr fwIdAdr;
     //FIXME get rid of SHARED_OFFS somehow and replace with an end tag and max limit
     for (uint32_t adr = ram.sdb_component.addr_first + BUILDID_OFFS; adr < ram.sdb_component.addr_first + BUILDID_OFFS + BUILDID_SIZE; adr += 4) fwIdAdr.push_back(adr);
+    std::cout << "got addresses, reading in" << std::endl;
     vBuf fwIdData = readCycle(fwIdAdr);
     std::string s(fwIdData.begin(),fwIdData.end());
-
+    std::cout << "processing vector. length is " << s.size() << std::endl;
     //check for magic word
     pos = 0;
     if(s.find(tagMagic, 0) == std::string::npos) {throw std::runtime_error( "Bad Firmware Info ROM: Magic word not found\n");}
     //check for project name
+    std::cout << "found magic word. searching for project tag" << std::endl;
     pos = s.find(tagProject, 0);
     if (pos == std::string::npos || (s.find(tagExpName, pos + tagProject.length()) != pos + tagProject.length())) {throw std::runtime_error( "Bad Firmware Info ROM: Not a DM project\n");}
-
+    std::cout << "found project tag, return string" << std::endl;
     return s;
   }
 

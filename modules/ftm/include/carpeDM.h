@@ -179,7 +179,7 @@ public:
                     atDown.clear();
                     atDown.removeMemories();
                     gDown.clear();
-
+                    sLog << "eb connect with" << en << std::endl;
                     return ebd.connect(en, atUp, atDown); 
                 } //Open connection to a DM via Etherbone
                bool disconnect() {return ebd.disconnect();} //Close connection
