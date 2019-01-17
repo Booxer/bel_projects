@@ -107,10 +107,10 @@ void CarpeDM::adjustValidTime(uint64_t& tValid, bool abs) {
 
 
 vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
-  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait )
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr )
 {
     mc_ptr mc;
-    if(verbose) sLog << "Command  type <" << type << ">" << std::endl;
+    sLog << "Command  type <" << type << ">" << std::endl;
     adjustValidTime(cmdTvalid, vabs);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,8 +153,8 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
 
     // lock all queues of a block
     if (type == dnt::sCmdLock) {
-      lock.wr.set = true;
-      lock.rd.set = true;  
+      lock.wr.set = lockWr;
+      lock.rd.set = lockRd;  
       return ew;
     // async clear all queues
     } else if (type == dnt::sCmdAsyncClear) {
@@ -166,8 +166,8 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
       return ew;
     // unlock all queues
     } else if (type == dnt::sCmdUnlock) {
-      lock.wr.clr = true;
-      lock.rd.clr = true; 
+      lock.wr.clr = lockWr;
+      lock.rd.clr = lockRd; 
       return ew;
     // Commands targeted at cmd queue of individual blocks
     } else if (type == dnt::sCmdNoop) {
@@ -214,37 +214,41 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
 //convenience wrappers
 //commands with no extras
 vEbwrs& CarpeDM::createNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target) {
-  return createCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false);
+  return createCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false, false, false);
+}
+
+vEbwrs& CarpeDM::createLockCtrlCommand(vEbwrs& ew, const std::string& type, const std::string& target, bool lockRd, bool lockWr ) {
+  return createCommand(ew, type, target, "", 0, 1, true, 0, false, false, false, false, 0, false, lockRd, lockWr );
 }
 
 //commands with time
 vEbwrs& CarpeDM::createQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid) {
-  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, 0, false);
+  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, 0, false, false, false);
 }
   
 //flows
 vEbwrs& CarpeDM::createFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma) {
-  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, false, false, false, 0, false);
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, false, false, false, 0, false, false, false);
 } 
 
 //flush or flush override
 vEbwrs& CarpeDM::createFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo) {
-  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, false, qIl, qHi, qLo, 0, false);
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, false, qIl, qHi, qLo, 0, false, false, false);
 } 
 
 //wait
 vEbwrs& CarpeDM::createWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target,  
   uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait ) {
-  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, cmdTwait, abswait);
+  return createCommand(ew, type, target, "", cmdPrio, cmdQty, vabs, cmdTvalid, false, false, false, false, cmdTwait, abswait, false, false);
 }
 
 vEbwrs& CarpeDM::createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, 
-  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait)
+  uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait,bool lockRd, bool lockWr )
 {
   updateModTime();
-  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait);
+  return createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait, lockRd, lockWr);
 }
 
 
@@ -266,7 +270,7 @@ vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
   BOOST_FOREACH( vertex_t v, vertices(g) ) {
 
     std::string target, destination, type;
-    bool qIl, qHi, qLo, perma, vabs, abswait;
+    bool qIl, qHi, qLo, perma, vabs, abswait, lockRd, lockWr;
     uint64_t cmdTvalid, cmdTwait;
     uint32_t cmdQty;
     uint8_t cmdPrio;
@@ -295,12 +299,14 @@ vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
     qHi       = s2u<bool>(g[v].qHi);
     qLo       = s2u<bool>(g[v].qLo);
     perma     = s2u<bool>(g[v].perma);
+    lockRd    = false;
+    lockWr    = false;
     //fixme hack to test compile
     abswait   = false;
   
     if(verbose) sLog << "Command <" << g[v].name << ">, type <" << g[v].type << ">" << std::endl;
 
-    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait);
+    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait, lockRd, lockWr);
   }  
 
   return ew;

@@ -27,7 +27,7 @@ public:
 
   BlockLock(const std::string& name, const uint32_t adr) 
     : baseAdr(adr), qflagsAdr(adr + BLOCK_CMDQ_FLAGS), 
-    wridxAdr(adr + BLOCK_CMDQ_WR_IDXS), rdidxAdr(adr + BLOCK_CMDQ_RD_IDXS), name(name) {};
+    wridxAdr(adr + BLOCK_CMDQ_WR_IDXS), rdidxAdr(adr + BLOCK_CMDQ_RD_IDXS), name(name), rd({false, false, false, false, }), wr({false, false, false, false, }) {};
 /*  
   BlockLock(const std::string& name, const uint32_t adr, bool setDNR, bool clrDNR, bool setDNW, bool clrDNW)
     : baseAdr(adr), qflagsAdr(adr + BLOCK_CMDQ_FLAGS), 

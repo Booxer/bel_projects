@@ -47,8 +47,12 @@ void LockManager::readInStat() {
   //decode read data
   for(unsigned idx = 0; idx < vBl.size(); idx++) {
     uint32_t flags   = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b[idx * _32b_SIZE_]);
+    std::cout << "******* Reading Stat " << vBl[idx].name << " ****" << std::endl;
+    std::cout << "flags 0x" << std::hex << flags << std::endl;
     vBl[idx].wr.stat = (bool)(flags >> BLOCK_CMDQ_DNW_POS); //wr lock is set when flag bit is present
     vBl[idx].rd.stat = (bool)(flags >> BLOCK_CMDQ_DNR_POS); //rd lock is set when flag bit is present
+    std::cout << " wrSet " << std::boolalpha << vBl[idx].wr.set << " rdSet " << vBl[idx].rd.set
+              << " wrstat " << vBl[idx].wr.stat << " rdstat " << vBl[idx].rd.stat  << std::endl;
   }
 }
 

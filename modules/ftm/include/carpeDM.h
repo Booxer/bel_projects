@@ -368,16 +368,20 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                uint8_t getCpuQty() {return ebd.getCpuQty();}
                bool isCpuIdxValid(uint8_t cpuIdx) {return ebd.isCpuIdxValid(cpuIdx);}
                void showMemSpace();
+               void lockManagerClear() {lm.clear();}
+               bool lockManagerHasEntries() {return (lm.getLockVec().size() > 0);}
+
 
 vEbwrs& createNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target);
+vEbwrs& createLockCtrlCommand(vEbwrs& ew, const std::string& type, const std::string& target, bool lockRd, bool lockWr );
 vEbwrs& createQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid);
 vEbwrs& createWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait );
 vEbwrs& createFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma);
 vEbwrs& createFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo);
-vEbwrs& createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait);
+vEbwrs& createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr);
 vEbwrs& createCommandBurst(vEbwrs& ew, Graph& g);
 vEbwrs& createMiniCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew);
-vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait );
+vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr );
 
 };
 
