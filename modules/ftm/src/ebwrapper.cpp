@@ -254,23 +254,23 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
     const std::string tagExpName    = "ftm";
     std::string version;
     size_t pos;
-    std::cout << "trying to extra id rom" << std::endl;
+    
     const struct sdb_device& ram = cpuDevs.at(cpuIdx);
     vAdr fwIdAdr;
     //FIXME get rid of SHARED_OFFS somehow and replace with an end tag and max limit
     for (uint32_t adr = ram.sdb_component.addr_first + BUILDID_OFFS; adr < ram.sdb_component.addr_first + BUILDID_OFFS + BUILDID_SIZE; adr += 4) fwIdAdr.push_back(adr);
-    std::cout << "got addresses, reading in" << std::endl;
+    
     vBuf fwIdData = readCycle(fwIdAdr);
     std::string s(fwIdData.begin(),fwIdData.end());
-    std::cout << "processing vector. length is " << s.size() << std::endl;
+    
     //check for magic word
     pos = 0;
     if(s.find(tagMagic, 0) == std::string::npos) {throw std::runtime_error( "Bad Firmware Info ROM: Magic word not found\n");}
     //check for project name
-    std::cout << "found magic word. searching for project tag" << std::endl;
+    
     pos = s.find(tagProject, 0);
     if (pos == std::string::npos || (s.find(tagExpName, pos + tagProject.length()) != pos + tagProject.length())) {throw std::runtime_error( "Bad Firmware Info ROM: Not a DM project\n");}
-    std::cout << "found project tag, return string" << std::endl;
+    
     return s;
   }
 

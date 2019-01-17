@@ -62,9 +62,12 @@ bool LockManager::isReady() {
       
     // read stat and first pass act
     vEbrds er = erStat + erAct;
+    std::cout << "DEBUG ADR 0" << std::endl;
+    for (auto& a : er.va) {std::cout << "0x" << std::hex << a << std::endl;}
+
     vBuf b0 = ebd.readCycle(er.va, er.vcs);
-    vBuf bStat0(b0.begin(), b0.begin() + vBl.size());
-    vBuf bAct0(b0.begin() + vBl.size(), b0.end());
+    vBuf bStat0(b0.begin(), b0.begin() + vBl.size() * _32b_SIZE_);
+    vBuf bAct0(b0.begin() + vBl.size() * _32b_SIZE_, b0.end());
 
     // probably not necessary to sleep because the eb call takes about as long,
     // but lets not rely on exec time! We got to make sure the DM has finished
@@ -74,6 +77,12 @@ bool LockManager::isReady() {
    
     // read second pass act
     vBuf bAct1 = ebd.readCycle(erAct.va, erAct.vcs);
+    std::cout << "DEBUG ADR 1" << std::endl;
+    for (auto& a : erAct.va) {std::cout << "0x" << std::hex << a << std::endl;}
+
+    hexDump("bStat0", bStat0);
+    hexDump("bAct0", bAct0);
+    hexDump("bAct1", bAct1);
 
     //decode read data
     for(unsigned idx = 0; idx < vBl.size(); idx++) {
@@ -85,12 +94,28 @@ bool LockManager::isReady() {
       uint32_t wrIdx1 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct1[(idx * 2 + 0) * _32b_SIZE_]);
       uint32_t rdIdx1 = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&bAct1[(idx * 2 + 1) * _32b_SIZE_]);
 
-      vBl[idx].wr.stat = (bool)(flags >> BLOCK_CMDQ_DNW_POS); //wr lock is set when flag bit is present
+      std::cout << "******* Lock check data " << vBl[idx].name << " ****" << std::endl;
+      std::cout << "flags 0x" << std::hex << flags << std::endl;
+      std::cout << "wrIdx0 0x" << std::hex << wrIdx0 << std::endl;
+      std::cout << "rdIdx0 0x" << std::hex << rdIdx0 << std::endl;
+      std::cout << "wrIdx1 0x" << std::hex << wrIdx1 << std::endl;
+      std::cout << "rdIdx1 0x" << std::hex << rdIdx1 << std::endl;
+
+
+      bool newWrStat = (bool)(flags >> BLOCK_CMDQ_DNW_POS); //wr lock is set when flag bit is present
+      bool newRdStat = (bool)(flags >> BLOCK_CMDQ_DNR_POS); //rd lock is set when flag bit is present
+
+      bool allNewSet = ((vBl[idx].wr.set & newWrStat) | ~vBl[idx].wr.set) & ((vBl[idx].rd.set & newRdStat) | ~vBl[idx].rd.set);
+
       vBl[idx].wr.act  = wrIdx0 == wrIdx1;                    //wr lock is active when no index diff was detected
-      vBl[idx].rd.stat = (bool)(flags >> BLOCK_CMDQ_DNR_POS); //rd lock is set when flag bit is present
       vBl[idx].rd.act  = rdIdx0 == rdIdx1;                    //rd lock is active when no index diff was detected
 
-      rdy &= ~(vBl[idx].isAllSet() & vBl[idx].isAct());  // if any requested lock was not set or not active, we're not ready.
+      rdy &= (allNewSet & vBl[idx].isAct());  // if any requested lock was not set or not active, we're not ready.
+
+      std::cout << "readiness: newWrStat" << (int)newWrStat << " newRdStat " << (int)newRdStat 
+                << " allNewSet " << (int)allNewSet << " wrAct " << (int)vBl[idx].wr.act 
+                << " rdAct " << (int)vBl[idx].rd.act << " isAct " << (int)vBl[idx].isAct() 
+                << " rdy " << (int)rdy << std::endl;
     }
     
     return rdy;

@@ -308,24 +308,31 @@ vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
 }
 
   int CarpeDM::send(vEbwrs& ew) {
+
     bool locksRdy;
+    sLog << "reading lockstates...";
     lm.readInStat(); //read current lock states
+    sLog << "done" << std::endl << " Setting locks...";
     lm.processLockRequests(); //set requested locks (or'ed with already set locks)
-    
+    sLog << "done" << std::endl; 
     //3 retries for lock readiness
     for(unsigned i = 0; i < 3; i++) {
+      sLog << "checking locks";
       locksRdy = lm.isReady();
+      sLog << "check performed" << std::endl;
       if (locksRdy) {
+        sLog << "locks ready. writing commands";
         ebd.writeCycle(ew.va, ew.vb, ew.vcs); //if ready, write commands. if not, restore locks and throw exception
+        //sLog << "writing commands" << std::endl;
         break;
       }
       std::chrono::milliseconds timespan(1);
       std::this_thread::sleep_for(timespan);  
     }
-    
+    sLog << "done." << std::endl << "Unlocking...";
     lm.processUnlockRequests(); //restore lock bits
     if (!locksRdy) throw std::runtime_error("Could not write commands, locking failed");
-
+    sLog << "done." << std::endl;
     return ew.vb.size();
   }
 

@@ -198,7 +198,7 @@ bool EbDev::connect(const std::string& en) {
     }
 
     if(verbose) {
-      sLog << " Done."  << std::endl << "Found " << getCpuQty() << " Cores, " << cpuIdxMap.size() << " of them run a valid DM firmware." << std::endl;
+      sLog << " Done."  << std::endl << "Found " << ebd.getCpuQty() << " Cores, " << cpuIdxMap.size() << " of them run a valid DM firmware." << std::endl;
     }
     std::string fwCause = foundVersionMax == -1 ? "" : "Requires FW v" + createFwVersionString(expVersion) + ", found " + createFwVersionString(foundVersionMax);
     if (cpuIdxMap.size() == 0) {throw std::runtime_error("No CPUs running a valid DM firmware found. " + fwCause);}

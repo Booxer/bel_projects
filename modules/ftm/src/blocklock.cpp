@@ -2,14 +2,18 @@
 
 vEbwrs& BlockLock::lock(vEbwrs& ew) {
   ew.va  += qflagsAdr;
-  writeLeNumberToBeBytes(ew.vb, (((uint32_t)wr.set | (uint32_t)wr.stat) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.set | (uint32_t)rd.stat) << BLOCK_CMDQ_DNR_POS) );
+  std::cout << "setting locks: wrset " << (int)wr.set << " wrstat " << (int)wr.stat << " rdset " << (int)rd.set << " rdstat " << (int)rd.stat << std::endl;
+  std::cout << "intended outcome: 0x " << std::hex << ((((uint32_t)wr.set | (uint32_t)wr.stat) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.set | (uint32_t)rd.stat) << BLOCK_CMDQ_DNR_POS)) << std::endl;
+  writeLeNumberToBeBytes(ew.vb, ((((uint32_t)wr.set | (uint32_t)wr.stat) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.set | (uint32_t)rd.stat) << BLOCK_CMDQ_DNR_POS)) );
   ew.vcs += leadingOne(1);
   return ew;
 }
 
 vEbwrs& BlockLock::unlock(vEbwrs& ew ) {
   ew.va  += qflagsAdr;
-  writeLeNumberToBeBytes(ew.vb, (((uint32_t)wr.stat & (uint32_t)~wr.clr) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.stat & (uint32_t)~rd.clr) << BLOCK_CMDQ_DNR_POS) );
+  std::cout << "setting unlocks: wrclr " << (int)wr.set << " wrstat " << (int)wr.stat << " rdclr " << (int)rd.set << " rdstat " << (int)rd.stat << std::endl;
+  std::cout << "intended outcome: 0x " << std::hex << ((((uint32_t)wr.stat & (uint32_t)~wr.clr) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.stat & (uint32_t)~rd.clr) << BLOCK_CMDQ_DNR_POS)) << std::endl;
+  writeLeNumberToBeBytes(ew.vb, ((((uint32_t)wr.stat & (uint32_t)~wr.clr) << BLOCK_CMDQ_DNW_POS) | (((uint32_t)rd.stat & (uint32_t)~rd.clr) << BLOCK_CMDQ_DNR_POS)) );
   ew.vcs += leadingOne(1);
   return ew;
 }
