@@ -159,8 +159,8 @@ vBuf CarpeDM::decompress(const vBuf& in) {return lzmaDecompress(in);}
 
 
   void CarpeDM::showMemSpace() {
+    sLog << "Space" << std::setw(11) << "Free" << std::endl;
     for (uint8_t x = 0; x < ebd.getCpuQty(); x++) {
-      sLog << "Space" << std::setw(11) << "Free" << std::endl;
       sLog << std::dec << std::setfill(' ') << std::setw(11) << atDown.getTotalSpace(x) << std::setw(10) << atDown.getFreeSpace(x) * 100 / atDown.getTotalSpace(x) << "%";
       sLog << std::endl;
     }

@@ -17,7 +17,7 @@ HwDelayReport& CarpeDM::getHwDelayReport(HwDelayReport& hdr) {
     hdr.timeMinNegUDts    = ebd.getDmWrTime();
     hdr.stallObservIntvl  = 250000;
 
-    for(int i = 0; i<cpuQty; i++) {
+    for(int i = 0; i<ebd.getCpuQty(); i++) {
       // Simulation, fill with dummies
       hdr.sdr.push_back(StallDelayReport());
       hdr.sdr[i].stallStreakMax     = 10*i;
@@ -41,7 +41,7 @@ HwDelayReport& CarpeDM::getHwDelayReport(HwDelayReport& hdr) {
     hdr.timeMinNegUDts    = writeBeBytesToLeNumber<uint64_t>(b + DM_DIAG_TIME_DIF_NEG_TS_GET_1 - base);
     hdr.stallObservIntvl  = writeBeBytesToLeNumber<uint32_t>(b + DM_DIAG_STALL_OBSERVATION_INTERVAL_RW - base);
 
-    for(int i = 0; i<cpuQty; i++) {
+    for(int i = 0; i<ebd.getCpuQty(); i++) {
       ebd.write32b(devAdr + DM_DIAG_STALL_STAT_SELECT_RW, i);
 
       vAdr vRa; vBuf rb; uint8_t* b;
@@ -92,7 +92,7 @@ void CarpeDM::configFwDiagnostics(uint64_t warnThrshld) {
   writeLeNumberToBeBytes<uint64_t>(b, warnThrshld);
 
 
-  for(int cpuIdx = 0; cpuIdx< cpuQty; cpuIdx++) {
+  for(int cpuIdx = 0; cpuIdx<ebd.getCpuQty(); cpuIdx++) {
     const uint32_t base = atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_DIAG;
 
     ew.va.push_back(base + T_DIAG_DIF_WTH + 0);

@@ -111,6 +111,7 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
 {
     mc_ptr mc;
     sLog << "Command  type <" << type << ">" << std::endl;
+            sLog << "DEBUG: VABS: " << std::boolalpha << " b " << vabs << std::endl;
     adjustValidTime(cmdTvalid, vabs);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,6 +179,7 @@ vEbwrs& CarpeDM::createCommand(vEbwrs& ew, const std::string& type, const std::s
     } else if (type == dnt::sCmdFlow) {
       
       //sLog << " Flowing from <" << target << "> to <" << destination << ">, permanent defDest change='" << s2u<bool>(g[v].perma) << "'" << std::endl;
+
       uint32_t adr = LM32_NULL_PTR;
       try { adr = getNodeAdr(destination, TransferDir::DOWNLOAD, AdrType::INT); } catch (std::runtime_error const& err) {
         throw std::runtime_error("Destination '" + destination + "'' invalid: " + std::string(err.what()));
@@ -299,14 +301,14 @@ vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
     qHi       = s2u<bool>(g[v].qHi);
     qLo       = s2u<bool>(g[v].qLo);
     perma     = s2u<bool>(g[v].perma);
+    sLog << "DEBUG: VABS: " << g[v].vabs << std::boolalpha << " recon " << vabs << std::endl;
     lockRd    = false;
     lockWr    = false;
     //fixme hack to test compile
     abswait   = false;
   
     if(verbose) sLog << "Command <" << g[v].name << ">, type <" << g[v].type << ">" << std::endl;
-
-    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, perma, qIl, qHi, qLo, cmdTvalid, cmdTwait, abswait, lockRd, lockWr);
+    createCommand(ew, type, target, destination, cmdPrio, cmdQty, vabs, cmdTvalid, perma, qIl, qHi, qLo, cmdTwait, abswait, lockRd, lockWr);
   }  
 
   return ew;
@@ -555,7 +557,10 @@ uint64_t CarpeDM::getThrDeadline(uint8_t cpuIdx, uint8_t thrIdx) {
 
 //FIXME wtf ... this doesnt queue anything!
 vEbwrs&  CarpeDM::setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew) {
-  ebd.write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME, t);
+  uint32_t startAdr = atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_STARTTIME;
+  ew.va += {startAdr, startAdr + _32b_SIZE_};
+  writeLeNumberToBeBytes<uint64_t>(ew.vb, t );
+  ew.vcs += leadingOne(2);
   return ew;
 }
 
@@ -565,7 +570,10 @@ uint64_t CarpeDM::getThrStartTime(uint8_t cpuIdx, uint8_t thrIdx) {
 
 //FIXME wtf ... this doesnt queue anything!
 vEbwrs&  CarpeDM::setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew) {
-  ebd.write64b(atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME, t);
+  uint32_t startAdr = atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs + SHCTL_THR_STA + thrIdx * _T_TS_SIZE_ + T_TS_PREPTIME;
+  ew.va += {startAdr, startAdr + _32b_SIZE_};
+  writeLeNumberToBeBytes<uint64_t>(ew.vb, t );
+  ew.vcs += leadingOne(2);
   return ew;
 }
 
