@@ -1,4 +1,5 @@
 testfiles = [
-  "./static/prio_and_type/test0.py",
+  "./static/basics/test.py",
+  "./static/prio_and_type/test.py",
   ]
 

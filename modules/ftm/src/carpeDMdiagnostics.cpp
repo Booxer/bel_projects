@@ -238,11 +238,11 @@ std::string& CarpeDM::getRawQReport(const std::string& blockName, std::string& r
         QueueElement& qe = qr.aQ[prio].aQe[i];
 
         report += "@RI:" + std::to_string(i) + ",PEN:" + (qe.pending ? std::string("1") : std::string("0")) + ",ORPH:" + (qe.orphaned ? std::string("1") : std::string("0"));
-        report += ",VABS:" + (qe.validAbs ? std::string("1") : std::string("0")) + ",VTIME:" + std::to_string(qe.validTime);
-        report += ",TYPE:" + std::to_string(qe.type) + ",STYPE:" + qe.sType;
-        report += ",QTY:" + std::to_string(qe.qty) + ",FLOWDST:" + qe.flowDst + ",FLOWDSTPAT:" + qe.flowDstPattern;
-        report += ",PERMA:" + (qe.flowPerma ? std::string("1") : std::string("0")) + ",FPRIO:" + (qe.flushIl ? std::string("1") : std::string("0")) + (qe.flushHi ? std::string("1") : std::string("0")) + (qe.flushLo ? std::string("1") : std::string("0"));
-        report += ",WABS:" + (qe.waitAbs ? std::string("1") : std::string("0")) + ",WTIME:" + std::to_string(qe.waitTime);
+        report += "\nVABS:" + (qe.validAbs ? std::string("1") : std::string("0")) + ",VTIME:" + std::to_string(qe.validTime);
+        report += "\nTYPE:" + std::to_string(qe.type) + ",STYPE:" + qe.sType;
+        report += "\nQTY:" + std::to_string(qe.qty) + ",FLOWDST:" + qe.flowDst + ",FLOWDSTPAT:" + qe.flowDstPattern;
+        report += "\nPERMA:" + (qe.flowPerma ? std::string("1") : std::string("0")) + ",FPRIO:" + (qe.flushIl ? std::string("1") : std::string("0")) + (qe.flushHi ? std::string("1") : std::string("0")) + (qe.flushLo ? std::string("1") : std::string("0"));
+        report += "\nWABS:" + (qe.waitAbs ? std::string("1") : std::string("0")) + ",WTIME:" + std::to_string(qe.waitTime);
         report += "\n";
       }
 

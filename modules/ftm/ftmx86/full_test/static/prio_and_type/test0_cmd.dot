@@ -4,7 +4,7 @@ name="QueuePrioAndTypeTest!CMD!";
 graph []
 
   CMD_P_LO0   [type="noop",   pattern="IN0", prio="0"];
-  CMD_P_LO1   [type="flow",   pattern="IN0", destpattern="B", prio="0"];
+  CMD_P_LO1   [type="flow",   pattern="IN0", destpattern="B", prio="0", permanent="true"];
   CMD_P_LO2   [type="flush",  pattern="IN0", prio="0", qil="1", qhi="1", qlo="1"];
   CMD_P_LO3   [type="wait",   pattern="IN0", prio="0", twait="50000"];
   CMD_P_HI0   [type="noop",   pattern="IN0", prio="1"];
