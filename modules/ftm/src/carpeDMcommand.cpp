@@ -549,7 +549,7 @@ void CarpeDM::softwareReset(bool clearStatistic) {
   clear_raw(true);
   resetAllThreads();
   if (clearStatistic) {
-    //clearHealth();
+    clearHealth();
     clearHwDiagnostics();
   }
 }
