@@ -71,9 +71,11 @@ private:
   void subtraction(Graph& g);
   void nullify();
 
-  //FIXME this ought to be a variadic template
-  int safeguardTransaction(int (CarpeDM::*func)(Graph&, bool), Graph& g, bool force);
-  int safeguardTransaction(int (CarpeDM::*func)(bool), bool force);
+  template <typename R, typename ... As1, typename ... As2>
+  R safeguardTransaction(R(CarpeDM::*func)(As1...), As2 ... args);
+
+  template <typename R, typename ... As1, typename ... As2>
+  int dSend(R(CarpeDM::*func)(As1...), As2 ... args);
 
   int add(Graph& g, bool force);
   int remove(Graph& g, bool force);
@@ -84,9 +86,9 @@ private:
 
   // Upload
   vEbwrs gatherUploadVector(std::set<uint8_t> moddedCpus, uint32_t modCnt, uint8_t opType);
-  vEbwrs& createModInfo     (uint8_t cpu, uint32_t modCnt, uint8_t opType, vEbwrs& ew, uint32_t adrOffs);
-  vEbwrs& createSchedModInfo(uint8_t cpu, uint32_t modCnt, uint8_t opType, vEbwrs& ew);
-  vEbwrs& createCmdModInfo  (uint8_t cpu, uint32_t modCnt, uint8_t opType, vEbwrs& ew);
+  vEbwrs& createModInfo     (vEbwrs& ew, uint8_t cpu, uint32_t modCnt, uint8_t opType, uint32_t adrOffs);
+  vEbwrs& createSchedModInfo(vEbwrs& ew, uint8_t cpu, uint32_t modCnt, uint8_t opType);
+  vEbwrs& createCmdModInfo  (vEbwrs& ew, uint8_t cpu, uint32_t modCnt, uint8_t opType);
   int upload(uint8_t opType, std::vector<QueueReport>& vQr); //Upload processed Graph to LM32 SoC via Etherbone
   int upload(uint8_t opType) {std::vector<QueueReport> vQr; return upload(opType, vQr);}
   // Download
@@ -97,7 +99,7 @@ private:
   void parseDownloadMgmt(const vBuf& downloadData);
   void checkTablesForSubgraph(Graph& g);
 
-  void resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx);
+  //void resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx);
   void baseUploadOnDownload();
   void prepareUpload(); //Process Graph for uploading to LM32 SoC
   void mergeUploadDuplicates(vertex_t borg, vertex_t victim);
@@ -142,21 +144,23 @@ private:
   void readMgmtLLMeta();
 
   
-  vEbwrs& setThrDeadline(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew);
-  vEbwrs& setThrCursor(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name, vEbwrs& ew);
+  vEbwrs& setThrDeadline(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
+  vEbwrs& setThrCursor(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, const std::string& name);
   void resetAllThreads();
-
-
 
   vEbwrs& staticFlush(const std::string& sBlock, bool prioIl, bool prioHi, bool prioLo, vEbwrs& ew, bool force);
 
   QueueElement& getQelement(Graph& g, AllocTable& at, uint8_t idx, amI allocIt, QueueElement& qe, const vStrC& futureOrphan);
   QueueElement& getQelement(Graph& g, AllocTable& at, uint8_t idx, amI allocIt, QueueElement& qe) {vStrC fo; return getQelement(g, at, idx, allocIt, qe, fo);}
-
   QueueReport& getQReport(Graph& g, AllocTable& at, const std::string& blockName, QueueReport& qr, const vStrC& futureOrphan);
 
+  const uint32_t getCmdInc(uint32_t hash, uint8_t prio);
+  uint32_t getThrCmdAdr(uint8_t cpuIdx);                                       // Returns the external address of a thread's command register area
+  uint32_t getThrInitialNodeAdr(uint8_t cpuIdx, uint8_t thrIdx);               // Returns the external address of a thread's initial node register
+  uint32_t getThrCurrentNodeAdr(uint8_t cpuIdx, uint8_t thrIdx);               // Returns the external address of a thread's current node register
+  const vAdr getCmdWrAdrs(uint32_t hash, uint8_t prio);
 
-
+  void adjustValidTime(uint64_t& tValid, bool abs);                            // Makes sure the given valid time is slightly in the future. Uses modTime as 'now'
 
   boost::dynamic_properties createParser(Graph& g);
 
@@ -210,11 +214,6 @@ public:
                 int getGroupsSize();
 
 // Aux Infos from Table lookups and static computation  /////////////////////////////////////////////////////////////////////////////////////////////////////
-     const uint32_t getCmdInc(uint32_t hash, uint8_t prio);
-           uint32_t getThrCmdAdr(uint8_t cpuIdx);                                       // Returns the external address of a thread's command register area
-           uint32_t getThrInitialNodeAdr(uint8_t cpuIdx, uint8_t thrIdx);               // Returns the external address of a thread's initial node register
-           uint32_t getThrCurrentNodeAdr(uint8_t cpuIdx, uint8_t thrIdx);               // Returns the external address of a thread's current node register
-         const vAdr getCmdWrAdrs(uint32_t hash, uint8_t prio);
             uint8_t getNodeCpu(const std::string& name, TransferDir dir);               // shortcut to obtain a node's cpu by its name
            uint32_t getNodeAdr(const std::string& name, TransferDir dir, AdrType adrT); // shortcut to obtain a node's address by its name
   const std::string getNodePattern (const std::string& sNode);
@@ -254,11 +253,14 @@ public:
                 int clear(bool force);                              // clears all nodes from DM
 
 // Command Generation and Dispatch ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            vEbwrs& blockAsyncClearQueues(const std::string& sBlock, vEbwrs& ew);
+            
               vStrC getLockedBlocks(bool checkReadLock, bool checkWriteLock);
                 int sendCommandsDot(const std::string& s); //Sends a dotfile of commands to the DM
                 int sendCommandsDotFile(const std::string& fn);
                 int sendCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc); //Send a command to Block <targetName> on CPU <cpuIdx> via Etherbone
+               void halt();
+                int staticFlushPattern(const std::string& sPattern, bool prioIl, bool prioHi, bool prioLo, bool force);
+                int staticFlushBlock(const std::string& sBlock, bool prioIl, bool prioHi, bool prioLo, bool force);
 
 
   // Short Live Infos from DM hardware reads /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -279,64 +281,84 @@ public:
 std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu and thread assignment of running pattern
                bool isPatternRunning(const std::string& sPattern);                  // true if Pattern <x> is running
                void updateModTime();
-               void adjustValidTime(uint64_t& tValid, bool abs);                            // Makes sure the given valid time is slightly in the future. Uses modTime as 'now'
 
-  // Commands to DM hardware ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
                void forceThrCursor(uint8_t cpuIdx, uint8_t thrIdx); //DEBUG ONLY !!!
-/*
-                int startThr(uint8_t cpuIdx, uint8_t thrIdx);                              // Requests Thread to start
-                int startPattern(const std::string& sPattern, uint8_t thrIdx);             // Requests Pattern to start
-                int startPattern(const std::string& sPattern);                             // Requests Pattern to start on first free thread
-                int startNodeOrigin(const std::string& sNode, uint8_t thrIdx);             // Requests thread <thrIdx> to start at node <sNode>
-                int startNodeOrigin(const std::string& sNode);                             // Requests a start at node <sNode>
-                int stopPattern(const std::string& sPattern);                              // Requests Pattern to stop
-                int stopNodeOrigin(const std::string& sNode);                              // Requests stop at node <sNode> (flow to idle)
-                int abortPattern(const std::string& sPattern);                             // Immediately aborts a Pattern
-                int abortNodeOrigin(const std::string& sNode);                             // Immediately aborts the thread whose pattern <sNode> belongs to
-                int abortThr(uint8_t cpuIdx, uint8_t thrIdx);                              // Immediately aborts a Thread
-*/                
-               void halt();
-               /*                                                                // Immediately aborts all threads on all cores
-                int setThrStart(uint8_t cpuIdx, uint32_t bits);                            // Requests Threads to start
-                int setThrAbort(uint8_t cpuIdx, uint32_t bits);                            // Immediately aborts Threads
-                int setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name); // Sets the Node the Thread will start from
-                int setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
-                int setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
-*/
-                int staticFlushPattern(const std::string& sPattern, bool prioIl, bool prioHi, bool prioLo, vEbwrs& ew, bool force);
-                int staticFlushBlock(const std::string& sBlock, bool prioIl, bool prioHi, bool prioLo, vEbwrs& ew, bool force);
 
 
+            vEbwrs& startThr(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx); //Requests Thread to start
+            vEbwrs& startPattern(vEbwrs& ew, const std::string& sPattern, uint8_t thrIdx); //Requests Pattern to start
+            vEbwrs& startPattern(vEbwrs& ew, const std::string& sPattern); //Requests Pattern to start on first free thread
+            vEbwrs& startNodeOrigin(vEbwrs& ew, const std::string& sNode, uint8_t thrIdx); //Requests thread <thrIdx> to start at node <sNode>
+            vEbwrs& startNodeOrigin(vEbwrs& ew, const std::string& sNode); //Requests a start at node <sNode>
+            vEbwrs& stopPattern(vEbwrs& ew, const std::string& sPattern); //Requests Pattern to stop
+            vEbwrs& stopNodeOrigin(vEbwrs& ew, const std::string& sNode); //Requests stop at node <sNode> (vEbwrs& ew, flow to idle)
+            vEbwrs& abortPattern(vEbwrs& ew, const std::string& sPattern); //Immediately aborts a Pattern
+            vEbwrs& abortNodeOrigin(vEbwrs& ew, const std::string& sNode); //Immediately aborts the thread whose pattern <sNode> belongs to
+            vEbwrs& abortThr(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx); //Immediately aborts a Thread
+            vEbwrs& setThrStart(vEbwrs& ew, uint8_t cpuIdx, uint32_t bits); //Requests Threads to start
+            vEbwrs& setThrAbort(vEbwrs& ew, uint8_t cpuIdx, uint32_t bits); //Immediately aborts Threads
+            vEbwrs& setThrOrigin(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, const std::string& name); //Sets the Node the Thread will start from
+            vEbwrs& setThrStartTime(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
+            vEbwrs& setThrPrepTime(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
+            vEbwrs& deactivateOrphanedCommands(vEbwrs& ew, std::vector<QueueReport>& vQr);
+            vEbwrs& clearHealth(vEbwrs& ew, uint8_t cpuIdx, uint8_t dummy);
+            vEbwrs& testme(vEbwrs& ew, uint32_t cpuIdx);
+            //vEbwrs& clearHealth(vEbwrs& ew);
+            //int clearHealth()   {return 0;}           
+            //int clearHealth(uint8_t cpuIdx) {return 0;}
 
-  vEbwrs& startThr(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew); //Requests Thread to start
-  vEbwrs& startPattern(const std::string& sPattern, uint8_t thrIdx, vEbwrs& ew); //Requests Pattern to start
-  vEbwrs& startPattern(const std::string& sPattern, vEbwrs& ew); //Requests Pattern to start on first free thread
-  vEbwrs& startNodeOrigin(const std::string& sNode, uint8_t thrIdx, vEbwrs& ew); //Requests thread <thrIdx> to start at node <sNode>
-  vEbwrs& startNodeOrigin(const std::string& sNode, vEbwrs& ew); //Requests a start at node <sNode>
-  vEbwrs& stopPattern(const std::string& sPattern, vEbwrs& ew); //Requests Pattern to stop
-  vEbwrs& stopNodeOrigin(const std::string& sNode, vEbwrs& ew); //Requests stop at node <sNode> (flow to idle)
-  vEbwrs& abortPattern(const std::string& sPattern, vEbwrs& ew); //Immediately aborts a Pattern
-  vEbwrs& abortNodeOrigin(const std::string& sNode, vEbwrs& ew); //Immediately aborts the thread whose pattern <sNode> belongs to
-  vEbwrs& abortThr(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew); //Immediately aborts a Thread
-  vEbwrs& setThrStart(uint8_t cpuIdx, uint32_t bits, vEbwrs& ew); //Requests Threads to start
-  vEbwrs& setThrAbort(uint8_t cpuIdx, uint32_t bits, vEbwrs& ew); //Immediately aborts Threads
-  vEbwrs& setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name, vEbwrs& ew); //Sets the Node the Thread will start from
-  vEbwrs& setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew);
-  vEbwrs& setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t, vEbwrs& ew);
-  vEbwrs& deactivateOrphanedCommands(std::vector<QueueReport>& vQr, vEbwrs& ew);
-  vEbwrs& clearHealth(uint8_t cpuIdx, vEbwrs& ew);
-  vEbwrs& resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx, vEbwrs& ew);
+            vEbwrs& resetThrMsgCnt(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx);
+            vEbwrs& blockAsyncClearQueues(vEbwrs& ew, const std::string& sBlock);
+            vEbwrs& createNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target);
+            vEbwrs& createLockCtrlCommand(vEbwrs& ew, const std::string& type, const std::string& target, bool lockRd, bool lockWr );
+            vEbwrs& createQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid);
+            vEbwrs& createWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait );
+            vEbwrs& createFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma);
+            vEbwrs& createFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo);
+            vEbwrs& createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr);
+            vEbwrs& createCommandBurst(vEbwrs& ew, Graph& g);
+            vEbwrs& createMiniCommand(vEbwrs& ew, const std::string& targetName, uint8_t cmdPrio, mc_ptr mc);
+            vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr );
+                int send(vEbwrs& ew);
 
+            //convenience wrappers without eb cycle control, send immediately
+            int startThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)                            > (&CarpeDM::startThr), cpuIdx, thrIdx                         );}
+            int startPattern(const std::string& sPattern, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&, uint8_t) > (&CarpeDM::startPattern), sPattern, thrIdx);}
+            int startNodeOrigin(const std::string& sNode, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&, uint8_t)   > (&CarpeDM::startNodeOrigin), sNode, thrIdx );}
+            int startNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                    > (&CarpeDM::startNodeOrigin), sNode);}
 
-    int send(vEbwrs& ew);
-// Diagnostics //////////////////////////////////////////////////////////////
+            int stopPattern(const std::string& sPattern)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&                            ) > (&CarpeDM::stopPattern), sPattern                            );}
+            int stopNodeOrigin(const std::string& sNode)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                                > (&CarpeDM::stopNodeOrigin), sNode);}
+            int abortNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string& )                               > (&CarpeDM::abortNodeOrigin), sNode );}
+            int abortThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t                         ) > (&CarpeDM::abortThr), cpuIdx, thrIdx);}
+            
+            int setThrStart(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint32_t                         ) > (&CarpeDM::setThrStart), cpuIdx,  bits );}
+            int setThrAbort(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint32_t                           ) > (&CarpeDM::setThrAbort), cpuIdx,  bits );}
+            int setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name) { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, const std::string& ) > (&CarpeDM::setThrOrigin), cpuIdx, thrIdx, name);}
+            int setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)           { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, uint64_t  )             > (&CarpeDM::setThrStartTime), cpuIdx, thrIdx, t );}
+    
+            int setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, uint64_t )              > (&CarpeDM::setThrPrepTime), cpuIdx, thrIdx, t);}
+            int deactivateOrphanedCommands(std::vector<QueueReport> & vQr)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, std::vector<QueueReport >&)                         > (&CarpeDM::deactivateOrphanedCommands), std::ref(vQr));}
+
+            //int clearHealth()                                                         { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&)         > (&CarpeDM::clearHealth));}
+            int testme(uint32_t cpuIdx)                                                { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint32_t)> (&CarpeDM::testme), cpuIdx);}
+          
+            int clearHealth(uint8_t cpuIdx, uint8_t dummy)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)> (&CarpeDM::clearHealth), cpuIdx, dummy);}
+          
+            int resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx)                        { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)                          > (&CarpeDM::resetThrMsgCnt), cpuIdx, thrIdx);}
+            
+            int blockAsyncClearQueues(const std::string& sBlock)                      { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                               > (&CarpeDM::blockAsyncClearQueues), sBlock);}
+
+ 
+
                void verboseOn()  {verbose = true;}                              // Turn on Verbose Output
                void verboseOff() {verbose = false;}                             // Turn off Verbose Output
                bool isVerbose()  const {return verbose;}                        // Tell if Output is set to Verbose
                void debugOn()  {debug = true;}                                  // Turn on Verbose Output
                void debugOff() {debug = false;}                                 // Turn off Verbose Output
                bool isDebug()  const {return debug;}                            // Tell if Output is set to Verbose
-               bool isSim()  const {return sim;}                         // Tell if this is a simulation. Cannot change while connected !!!
+               bool isSim()  const {return sim;}                                // Tell if this is a simulation. Cannot change while connected !!!
                void testOn()  {testmode = true;}                                // Turn on Testmode
                void testOff() {testmode = false;}                               // Turn off Testmode
                bool isTest() const {return testmode;}                           // Tell if Testmode is on
@@ -344,12 +366,10 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void optimisedS2ROff(){optimisedS2R = false;}                    // Optimised Safe2remove off
                bool isOptimisedS2R() const {return optimisedS2R;}               // tell if Safe2remove optimisation is on or off
       HealthReport& getHealth(uint8_t cpuIdx, HealthReport &hr);                // FIXME why reference in, reference out ? its not like you can add to this report ...
-               void clearHealth(uint8_t cpuIdx);
-               void clearHealth();
        QueueReport& getQReport(const std::string& blockName, QueueReport& qr);  // FIXME why reference in, reference out ? its not like you can add to this report ...
        std::string& getRawQReport(const std::string& blockName, std::string& report) ;
            uint64_t getDmWrTime() {return ebd.getDmWrTime();}
-    HwDelayReport& getHwDelayReport(HwDelayReport& hdr);
+     HwDelayReport& getHwDelayReport(HwDelayReport& hdr);
                void clearHwDiagnostics();
                void startStopHwDiagnostics(bool enable);
                void configHwDiagnostics(uint64_t timeIntvl, uint32_t stallIntvl);
@@ -368,26 +388,16 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                bool tableCheck(std::string& report);
                void coverage3Upload(uint64_t seed );
                std::vector<std::vector<uint64_t>> coverage3TestData(uint64_t seedStart, uint64_t cases, uint8_t parts, uint8_t percentage );
-               Graph& getDownGraph(); //Returns the Download Graph for CPU <cpuIdx
+             Graph& getDownGraph(); //Returns the Download Graph for CPU <cpuIdx
                void dirtyCtShow() {ct.debug(sLog);}
                void showCpuList() {return ebd.showCpuList();}
-               uint8_t getCpuQty() {return ebd.getCpuQty();}
+            uint8_t getCpuQty() {return ebd.getCpuQty();}
                bool isCpuIdxValid(uint8_t cpuIdx) {return ebd.isCpuIdxValid(cpuIdx);}
                void showMemSpace();
                void lockManagerClear() {lm.clear();}
                bool lockManagerHasEntries() {return (lm.getLockVec().size() > 0);}
                void softwareReset(bool clearStatistic); 
 
-vEbwrs& createNonQCommand(vEbwrs& ew, const std::string& type, const std::string& target);
-vEbwrs& createLockCtrlCommand(vEbwrs& ew, const std::string& type, const std::string& target, bool lockRd, bool lockWr );
-vEbwrs& createQCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid);
-vEbwrs& createWaitCommand(vEbwrs& ew, const std::string& type, const std::string& target, uint8_t cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, uint64_t cmdTwait, bool abswait );
-vEbwrs& createFlowCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma);
-vEbwrs& createFlushCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool qIl, bool qHi, bool qLo);
-vEbwrs& createFullCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo, uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr);
-vEbwrs& createCommandBurst(vEbwrs& ew, Graph& g);
-vEbwrs& createMiniCommand(const std::string& targetName, uint8_t cmdPrio, mc_ptr mc, vEbwrs& ew);
-vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr );
 
 };
 
