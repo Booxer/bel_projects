@@ -699,7 +699,7 @@ int main(int argc, char* argv[]) {
       } else {
         origin = cdm.getThrOrigin(cpuIdx, thrIdx);
         if ((origin == DotStr::Node::Special::sIdle) || (origin == DotStr::Misc::sUndefined)) {std::cerr << program << ": Cannot start, origin of CPU " << cpuIdx << "'s thread " << thrIdx << " is not a valid node" << std::endl; return -1;}
-        cdm.startThr(ew, cpuIdx, thrIdx);
+        cdm.startThr(cpuIdx, thrIdx);
       }
 
     }
@@ -707,7 +707,7 @@ int main(int argc, char* argv[]) {
       if (targetName == NULL) {std::cerr << program << ": expected name of target node" << std::endl; return -1; }
       if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
 
-        cdm.stopNodeOrigin(ew, targetName);
+        cdm.stopNodeOrigin(targetName);
 
     }
     else if (cmp == "startpattern")  {
@@ -719,14 +719,14 @@ int main(int argc, char* argv[]) {
     }
     else if (cmp == "stoppattern")  {
       if( targetName != NULL) {
-        cdm.stopPattern(ew, targetName);
+        cdm.stopPattern(targetName);
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
  
 
     }
     else if (cmp == "abortpattern")  {
       if( targetName != NULL) {
-        cdm.abortPattern(ew, targetName);
+        cdm.abortPattern(targetName);
       } else { std::cout << "Missing valid Pattern name" << std::endl; }
 
     }
@@ -780,7 +780,7 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     else if (cmp == "cleardiag")  {
-      //cdm.clearHealth();
+      cdm.clearHealth();
       cdm.clearHwDiagnostics();
       return 0;
     }
@@ -797,8 +797,7 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     else if (cmp == "clearcpudiag")  {
-      //cdm.clearHealth(cpuIdx, 0);
-      cdm.testme(cpuIdx);
+      cdm.clearHealth(cpuIdx);
       return 0;
     }
     else if (cmp == "cfghwdiag") {

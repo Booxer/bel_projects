@@ -302,11 +302,8 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
             vEbwrs& setThrStartTime(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
             vEbwrs& setThrPrepTime(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t);
             vEbwrs& deactivateOrphanedCommands(vEbwrs& ew, std::vector<QueueReport>& vQr);
-            vEbwrs& clearHealth(vEbwrs& ew, uint8_t cpuIdx, uint8_t dummy);
-            vEbwrs& testme(vEbwrs& ew, uint32_t cpuIdx);
-            //vEbwrs& clearHealth(vEbwrs& ew);
-            //int clearHealth()   {return 0;}           
-            //int clearHealth(uint8_t cpuIdx) {return 0;}
+            vEbwrs& clearHealth(vEbwrs& ew, uint8_t cpuIdx);
+            vEbwrs& clearHealth(vEbwrs& ew);
 
             vEbwrs& resetThrMsgCnt(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx);
             vEbwrs& blockAsyncClearQueues(vEbwrs& ew, const std::string& sBlock);
@@ -321,36 +318,49 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
             vEbwrs& createMiniCommand(vEbwrs& ew, const std::string& targetName, uint8_t cmdPrio, mc_ptr mc);
             vEbwrs& createCommand(vEbwrs& ew, const std::string& type, const std::string& target, const std::string& destination, uint8_t  cmdPrio, uint8_t cmdQty, bool vabs, uint64_t cmdTvalid, bool perma, bool qIl, bool qHi, bool qLo,  uint64_t cmdTwait, bool abswait, bool lockRd, bool lockWr );
                 int send(vEbwrs& ew);
-
+/*
             //convenience wrappers without eb cycle control, send immediately
-            int startThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)                            > (&CarpeDM::startThr), cpuIdx, thrIdx                         );}
-            int startPattern(const std::string& sPattern, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&, uint8_t) > (&CarpeDM::startPattern), sPattern, thrIdx);}
-            int startNodeOrigin(const std::string& sNode, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&, uint8_t)   > (&CarpeDM::startNodeOrigin), sNode, thrIdx );}
-            int startNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                    > (&CarpeDM::startNodeOrigin), sNode);}
+            int startThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return <>(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t, uint8_t)                            > this->startThr, cpuIdx, thrIdx                         );}
+            int startPattern(const std::string& sPattern, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sPattern, uint8_t thrIdx) > (&CarpeDM::startPattern), sPattern, thrIdx);}
+            int startNodeOrigin(const std::string& sNode, uint8_t thrIdx)             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sNode, uint8_t thrIdx )   > (&CarpeDM::startNodeOrigin), sNode, thrIdx );}
+            int startNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sNode)                    > (&CarpeDM::startNodeOrigin), sNode);}
+            int stopPattern(const std::string& sPattern)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sPattern                            ) > (&CarpeDM::stopPattern), sPattern                            );}
+            int stopNodeOrigin(const std::string& sNode)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sNode)                                > (&CarpeDM::stopNodeOrigin), sNode);}
+            int abortNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sNode )                               > (&CarpeDM::abortNodeOrigin), sNode );}
+            int abortThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx                         ) > (&CarpeDM::abortThr), cpuIdx, thrIdx);}
+            int setThrStart(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint32_t bits                          ) > (&CarpeDM::setThrStart), cpuIdx,  bits );}
+            int setThrAbort(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint32_t bits                          ) > (&CarpeDM::setThrAbort), cpuIdx,  bits );}
+            int setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name) { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, const std::string& name) > (&CarpeDM::setThrOrigin), cpuIdx, thrIdx, name);}
+            int setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)           { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t )             > (&CarpeDM::setThrStartTime), cpuIdx, thrIdx, t );}
+            int setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)              > (&CarpeDM::setThrPrepTime), cpuIdx, thrIdx, t);}
+            int deactivateOrphanedCommands(std::vector<QueueReport> & vQr)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, std::vector<QueueReport >& vQr)                         > (&CarpeDM::deactivateOrphanedCommands), std::ref(vQr));}
+            int clearHealth()                                                         { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew                                        )  > (&CarpeDM::clearHealth));}
+            int clearHealth(uint8_t cpuIdx)                                           { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx                                        )  > (&CarpeDM::clearHealth), cpuIdx);}
+            int resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx)                        { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx)                          > (&CarpeDM::resetThrMsgCnt), cpuIdx, thrIdx);}
+            int blockAsyncClearQueues(const std::string& sBlock)                      { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs& ew, const std::string& sBlock)                               > (&CarpeDM::blockAsyncClearQueues), sBlock);}
+*/
+            //FIXME workaround for flawed template approach (disambiguation of member functin pointers failing). no time to figure it out right  now, get the job done first
+            //convenience wrappers without eb cycle control, send immediately
+            int startThr(uint8_t cpuIdx, uint8_t thrIdx)                              { vEbwrs ew; startThr(ew, cpuIdx, thrIdx );           return send(ew);}
+            int startPattern(const std::string& sPattern, uint8_t thrIdx)             { vEbwrs ew; startPattern(ew, sPattern, thrIdx);      return send(ew);}
+            int startNodeOrigin(const std::string& sNode, uint8_t thrIdx)             { vEbwrs ew; startNodeOrigin(ew, sNode, thrIdx );     return send(ew);}
+            int startNodeOrigin(const std::string& sNode)                             { vEbwrs ew; startNodeOrigin(ew, sNode);              return send(ew);}
+            int stopPattern(const std::string& sPattern)                              { vEbwrs ew; stopPattern(ew, sPattern  );             return send(ew);}
+            int stopNodeOrigin(const std::string& sNode)                              { vEbwrs ew; stopNodeOrigin(ew, sNode);               return send(ew);}
+            int abortPattern(const std::string& sPattern)                             { vEbwrs ew; abortPattern(ew, sPattern);              return send(ew);}
+            int abortNodeOrigin(const std::string& sNode)                             { vEbwrs ew; abortNodeOrigin(ew, sNode );             return send(ew);}
+            int abortThr(uint8_t cpuIdx, uint8_t thrIdx)                              { vEbwrs ew; abortThr(ew, cpuIdx, thrIdx);            return send(ew);}
+            int setThrStart(uint8_t cpuIdx, uint32_t bits)                            { vEbwrs ew; setThrStart(ew, cpuIdx,  bits );         return send(ew);}
+            int setThrAbort(uint8_t cpuIdx, uint32_t bits)                            { vEbwrs ew; setThrAbort(ew, cpuIdx,  bits );         return send(ew);}
+            int setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name) { vEbwrs ew; setThrOrigin(ew, cpuIdx, thrIdx, name);  return send(ew);}
+            int setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)           { vEbwrs ew; setThrStartTime(ew, cpuIdx, thrIdx, t ); return send(ew);}
+            int setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)            { vEbwrs ew; setThrPrepTime(ew, cpuIdx, thrIdx, t);   return send(ew);}
+            int deactivateOrphanedCommands(std::vector<QueueReport> & vQr)            { vEbwrs ew; deactivateOrphanedCommands(ew, vQr);     return send(ew);}
+            int clearHealth()                                                         { vEbwrs ew; clearHealth(ew);                         return send(ew);}
+            int clearHealth(uint8_t cpuIdx)                                           { vEbwrs ew; clearHealth(ew, cpuIdx);                 return send(ew);}
+            int resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx)                        { vEbwrs ew; resetThrMsgCnt(ew, cpuIdx, thrIdx);      return send(ew);}
+            int blockAsyncClearQueues(const std::string& sBlock)                      { vEbwrs ew; blockAsyncClearQueues(ew, sBlock);       return send(ew);}
 
-            int stopPattern(const std::string& sPattern)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&                            ) > (&CarpeDM::stopPattern), sPattern                            );}
-            int stopNodeOrigin(const std::string& sNode)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                                > (&CarpeDM::stopNodeOrigin), sNode);}
-            int abortNodeOrigin(const std::string& sNode)                             { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string& )                               > (&CarpeDM::abortNodeOrigin), sNode );}
-            int abortThr(uint8_t cpuIdx, uint8_t thrIdx)                              { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t                         ) > (&CarpeDM::abortThr), cpuIdx, thrIdx);}
-            
-            int setThrStart(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint32_t                         ) > (&CarpeDM::setThrStart), cpuIdx,  bits );}
-            int setThrAbort(uint8_t cpuIdx, uint32_t bits)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint32_t                           ) > (&CarpeDM::setThrAbort), cpuIdx,  bits );}
-            int setThrOrigin(uint8_t cpuIdx, uint8_t thrIdx, const std::string& name) { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, const std::string& ) > (&CarpeDM::setThrOrigin), cpuIdx, thrIdx, name);}
-            int setThrStartTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)           { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, uint64_t  )             > (&CarpeDM::setThrStartTime), cpuIdx, thrIdx, t );}
-    
-            int setThrPrepTime(uint8_t cpuIdx, uint8_t thrIdx, uint64_t t)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t, uint64_t )              > (&CarpeDM::setThrPrepTime), cpuIdx, thrIdx, t);}
-            int deactivateOrphanedCommands(std::vector<QueueReport> & vQr)            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, std::vector<QueueReport >&)                         > (&CarpeDM::deactivateOrphanedCommands), std::ref(vQr));}
-
-            //int clearHealth()                                                         { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&)         > (&CarpeDM::clearHealth));}
-            int testme(uint32_t cpuIdx)                                                { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint32_t)> (&CarpeDM::testme), cpuIdx);}
-          
-            int clearHealth(uint8_t cpuIdx, uint8_t dummy)                            { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)> (&CarpeDM::clearHealth), cpuIdx, dummy);}
-          
-            int resetThrMsgCnt(uint8_t cpuIdx, uint8_t thrIdx)                        { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, uint8_t, uint8_t)                          > (&CarpeDM::resetThrMsgCnt), cpuIdx, thrIdx);}
-            
-            int blockAsyncClearQueues(const std::string& sBlock)                      { return dSend(static_cast<vEbwrs& (CarpeDM::*)(vEbwrs&, const std::string&)                               > (&CarpeDM::blockAsyncClearQueues), sBlock);}
-
- 
 
                void verboseOn()  {verbose = true;}                              // Turn on Verbose Output
                void verboseOff() {verbose = false;}                             // Turn off Verbose Output

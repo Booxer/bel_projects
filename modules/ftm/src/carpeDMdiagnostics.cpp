@@ -467,20 +467,16 @@ void CarpeDM::inspectHeap(uint8_t cpuIdx) {
   }
 }
 
-/*
+
 
 vEbwrs& CarpeDM::clearHealth(vEbwrs& ew) {
-  //for(int cpuIdx = 0; cpuIdx < ebd.getCpuQty(); cpuIdx++) { clearHealth(ew, cpuIdx); }
-  return ew;
-}
-*/
-vEbwrs& CarpeDM::testme(vEbwrs& ew, uint32_t cpuIdx ) {
+  for(int cpuIdx = 0; cpuIdx < ebd.getCpuQty(); cpuIdx++) { clearHealth(ew, cpuIdx); }
   return ew;
 }
 
 
-vEbwrs& CarpeDM::clearHealth(vEbwrs& ew, uint8_t cpuIdx, uint8_t dummy ) {
- /*
+vEbwrs& CarpeDM::clearHealth(vEbwrs& ew, uint8_t cpuIdx) {
+ 
   uint32_t const baseAdr = atDown.getMemories()[cpuIdx].extBaseAdr + atDown.getMemories()[cpuIdx].sharedOffs;
 
   uint8_t buf[8];
@@ -550,7 +546,7 @@ vEbwrs& CarpeDM::clearHealth(vEbwrs& ew, uint8_t cpuIdx, uint8_t dummy ) {
 
   //insert EB flow control vector
   ew.vcs += leadingOne(ew.va.size() - oldContent);
-*/
+
   return ew;
 
 }
