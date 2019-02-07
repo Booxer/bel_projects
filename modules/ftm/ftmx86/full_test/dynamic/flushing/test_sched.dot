@@ -1,0 +1,21 @@
+digraph g {
+name="Loop with Initialiser";
+edge  [type="defdst"]
+node  [cpu="0"];
+  
+  MSG_A    [type="tmsg",  pattern="a",  patentry="true", toffs=0, id="0x1000000000000000", par="0x0000000000000000", tef="0"];
+  BLOCK_A  [type="block", pattern="A",  patentry="true", patexit="true", qlo="1", qhi="1", tperiod=1000];
+  BLOCK_B  [type="block", pattern="B",  patentry="true", patexit="true", qlo="1", tperiod=1000];
+  BLOCK_C  [type="block", pattern="C",  patentry="true", patexit="true", qlo="1", tperiod=1000];
+  CMD_LOOP   [type="flow",  pattern="LOOP", patentry="true",  toffs  = 0, tvalid=0, qty=9, prio="0", vabs="true"]; 
+  BLOCK_LOOP  [type="block", pattern="LOOP",  patexit="true", tperiod=1000];
+
+
+  CMD_LOOP->BLOCK_LOOP->MSG_A->BLOCK_A->BLOCK_B;
+  BLOCK_A->BLOCK_C [type="altdst"];
+  BLOCK_A->MSG_A [type="altdst"];
+  CMD_LOOP -> BLOCK_A [type="target"];
+  CMD_LOOP -> MSG_A [type="flowdst"];
+
+
+}

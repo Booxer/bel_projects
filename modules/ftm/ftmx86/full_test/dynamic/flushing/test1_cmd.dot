@@ -1,0 +1,8 @@
+digraph g {
+name="FlushWithOverride!CMD!";
+
+graph []
+
+  CMD_P_LO2   [type="flush",  pattern="A", prio="1", qlo="1", destpattern="C", vabs="true"];
+  
+}
