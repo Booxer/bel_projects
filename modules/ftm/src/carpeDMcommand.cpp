@@ -446,7 +446,9 @@ vEbwrs& CarpeDM::createCommandBurst(vEbwrs& ew, Graph& g) {
       auto x = atDown.lookupAdr(cpuIdx, atDown.adrConv(AdrType::INT, AdrType::MGMT,cpuIdx, adr));
       return gDown[x->v].name;
     } catch (...) {
-      return DotStr::Misc::sUndefined;
+      std::stringstream auxstream;
+      auxstream << " 0x" << std::setfill('0') << std::setw(8) << std::hex << adr;
+      return DotStr::Misc::sUndefined + auxstream.str();
     }
   }
 
@@ -546,6 +548,8 @@ vEbwrs& CarpeDM::resetThrMsgCnt(vEbwrs& ew, uint8_t cpuIdx, uint8_t thrIdx) {
 
 void CarpeDM::softwareReset(bool clearStatistic) {
   halt();
+  std::chrono::milliseconds timespan(1);
+  std::this_thread::sleep_for(timespan);
   clear_raw(true);
   resetAllThreads();
   if (clearStatistic) {

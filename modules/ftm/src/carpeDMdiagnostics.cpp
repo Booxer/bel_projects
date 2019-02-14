@@ -408,7 +408,15 @@ std::string& CarpeDM::getRawQReport(const std::string& blockName, std::string& r
     return qe;
   }
 
+void CarpeDM::dumpNode() {
 
+  Graph& g = gDown;
+  BOOST_FOREACH( vertex_t v, vertices(g) ) {
+    auto it = atDown.lookupVertex(v);
+    auto* x = (AllocMeta*)&(*it);
+    hexDump(g[x->v].name.c_str(), (const char*)x->b, _MEM_BLOCK_SIZE);
+  }
+}
 
 void CarpeDM::dumpNode(const std::string& name) {
 

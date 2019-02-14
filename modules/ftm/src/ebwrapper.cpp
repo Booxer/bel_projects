@@ -178,7 +178,7 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
           vFoundVersion.push_back(foundVersion);
           
 
-          if ( (foundVersion >= expVersionMin) && (foundVersion <= expVersionMax) ) {
+          //if ( (foundVersion >= expVersionMin) && (foundVersion <= expVersionMax) ) {
             //FIXME check for consequent use of cpu index map!!! I'm sure there'll be absolute chaos throughout the lib if CPUs indices were not continuous
             cpuIdxMap[cpuIdx]    = mappedIdx;
 
@@ -192,7 +192,7 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
               atUp.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             atDown.addMemory(cpuIdx, extBaseAdr, intBaseAdr, peerBaseAdr, sharedOffs, space, rawSize );
             mappedIdx++;
-          }
+          //}
           
        
         }
@@ -209,7 +209,10 @@ bool EbWrapper::connect(const std::string& en, AllocTable& atUp, AllocTable& atD
       sLog << " Done."  << std::endl << "Found " << cpuQty << " Cores, " << cpuIdxMap.size() << " of them run a valid DM firmware." << std::endl;
     }
     std::string fwCause = foundVersionMax == -1 ? "" : "Requires FW v" + createFwVersionString(expVersionMin) + ", found " + createFwVersionString(foundVersionMax);
-    if (cpuIdxMap.size() == 0) {throw std::runtime_error("No CPUs running a valid DM firmware found. " + fwCause);}
+    if (cpuIdxMap.size() == 0) {
+      sErr << "WARNING: FW Version mismatch" << std::endl;
+      //throw std::runtime_error("No CPUs running a valid DM firmware found. " + fwCause);
+    }
 
 
     return ret;

@@ -99,32 +99,36 @@ namespace dnt = DotStr::Node::TypeVal;
 
     // recover container
     vBuf aux = atDown.recoverMgmt();
-    vBuf tmpMgmtRecovery = decompress(aux);
 
-    if(verbose) sLog << "Bytes expected: " << std::dec << atDown.getMgmtTotalSize() << ", recovered: " << std::dec << aux.size() << std::endl << std::endl;
-
-    // Rebuild Grouptable
+    try {
+      vBuf tmpMgmtRecovery = decompress(aux);
 
 
-    GroupTable gtTmp;
-    std::string tmpStrGrouptab = std::string(tmpMgmtRecovery.begin(), tmpMgmtRecovery.begin() + atDown.getMgmtGrpSize());
-    if (tmpStrGrouptab.size()) gtTmp.load(tmpStrGrouptab);
-    gt = gtTmp;
-    // Rebuild HashMap from Grouptable
-    hm.clear();
-    for(auto& it : gt.getTable()) {
-      hm.add(it.node);
-    }
-    // Rebuild Covenanttable
-    CovenantTable ctTmp;
-    std::string tmpStrCovtab = std::string(tmpMgmtRecovery.begin() + atDown.getMgmtGrpSize(), tmpMgmtRecovery.end());
-    if (tmpStrCovtab.size()) ctTmp.load(tmpStrCovtab);
-    ct = ctTmp;
+      if(verbose) sLog << "Bytes expected: " << std::dec << atDown.getMgmtTotalSize() << ", recovered: " << std::dec << aux.size() << std::endl << std::endl;
 
-    // clean up - remove now obsolete management data (we need a fresh set anyway once upload data is set)
-    atDown.deallocateAllMgmt();
-    // Tables and Pools match Bitmap again. As far as parseDownloadData is concerned, we were never here.
+      // Rebuild Grouptable
 
+
+      GroupTable gtTmp;
+      std::string tmpStrGrouptab = std::string(tmpMgmtRecovery.begin(), tmpMgmtRecovery.begin() + atDown.getMgmtGrpSize());
+      if (tmpStrGrouptab.size()) gtTmp.load(tmpStrGrouptab);
+      gt = gtTmp;
+      // Rebuild HashMap from Grouptable
+      hm.clear();
+      for(auto& it : gt.getTable()) {
+        hm.add(it.node);
+      }
+      // Rebuild Covenanttable
+      CovenantTable ctTmp;
+      std::string tmpStrCovtab = std::string(tmpMgmtRecovery.begin() + atDown.getMgmtGrpSize(), tmpMgmtRecovery.end());
+      if (tmpStrCovtab.size()) ctTmp.load(tmpStrCovtab);
+      ct = ctTmp;
+
+      // clean up - remove now obsolete management data (we need a fresh set anyway once upload data is set)
+      atDown.deallocateAllMgmt();
+      // Tables and Pools match Bitmap again. As far as parseDownloadData is concerned, we were never here.
+      
+    } catch (...) { sErr << "Failed to obtain management metadata from DM RAM" << std::endl; }
   }
 
 

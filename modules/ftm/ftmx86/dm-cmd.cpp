@@ -480,6 +480,16 @@ int main(int argc, char* argv[]) {
       bool clearStatistic = targetName != NULL && targetName == std::string("all");
       std::cout << "clear statistic:" << std::boolalpha << clearStatistic << std::endl;
       cdm.softwareReset(clearStatistic);
+      /*
+      cdm.halt();
+      std::chrono::milliseconds timespan(0.1);
+      std::this_thread::sleep_for(timespan);
+      cdm.clear(false);
+      if(clearStatistic) {
+        cdm.clearHealth();
+        cdm.clearHwDiagnostics();
+      }
+      */
       return 0;
     }
 
@@ -743,12 +753,14 @@ int main(int argc, char* argv[]) {
       return 0;
     }
     else if (cmp == "hex")  {
-      if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
+      /*if(!(cdm.isInHashDict( targetName))) {std::cerr << program << ": Target node '" << targetName << "'' was not found on DM" << std::endl; return -1; }
       try {
         cdm.dumpNode(targetName);
       } catch (std::runtime_error const& err) {
         std::cerr << program << ": Node not found. Cause: " << err.what() << std::endl; return -21;
       }
+      */
+      cdm.dumpNode();
       return 0;
     }
     else if (cmp == "rawvisited")  {

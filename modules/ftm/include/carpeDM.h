@@ -390,6 +390,7 @@ std::pair<int, int> findRunningPattern(const std::string& sPattern); // get cpu 
                void showUp(bool filterMeta);                                               // show a CPU's Upload address table
                void showDown(bool filterMeta);
                void dumpNode(const std::string& name);                     // hex dump a node
+               void dumpNode();
                void showPaint();
                bool isPainted(const std::string& name);
                void inspectHeap(uint8_t cpuIdx);
