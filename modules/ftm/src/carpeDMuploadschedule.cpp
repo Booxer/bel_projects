@@ -540,8 +540,12 @@ using namespace DotStr::Misc;
 
     vBuf tmpBuf(tmpStrBuf.begin(), tmpStrBuf.end());
     vBuf mgmtBinary = compress(tmpBuf);
-    vBuf verifyBinary = decompress(mgmtBinary);
-    sLog << "use verify " << verifyBinary.size() << std::endl; 
+    //mgmtBinary[0] = '!'; Test Verify
+    try {
+      vBuf verifyBinary = decompress(mgmtBinary);
+    } catch (std::runtime_error const& err)  {
+      throw std::runtime_error("A-Priori Verify for LZMA compression failed, " + std::string(err.what()));
+    }
     atUp.allocateMgmt(mgmtBinary);
     atUp.populateMgmt(mgmtBinary);
     //atUp.debugMgmt(sLog);
