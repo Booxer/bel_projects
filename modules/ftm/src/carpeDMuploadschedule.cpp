@@ -539,7 +539,7 @@ using namespace DotStr::Misc;
 
 
     vBuf tmpBuf(tmpStrBuf.begin(), tmpStrBuf.end());
-    vBuf mgmtBinary = compress(tmpBuf);
+    vBuf mgmtBinary = tmpBuf; //compress(tmpBuf);
     atUp.allocateMgmt(mgmtBinary);
     atUp.populateMgmt(mgmtBinary);
     //atUp.debugMgmt(sLog);
