@@ -99,7 +99,7 @@ namespace dnt = DotStr::Node::TypeVal;
 
     // recover container
     vBuf aux = atDown.recoverMgmt();
-    vBuf tmpMgmtRecovery = decompress(aux);
+    vBuf tmpMgmtRecovery = aux; //decompress(aux);
 
     if(verbose) sLog << "Bytes expected: " << std::dec << atDown.getMgmtTotalSize() << ", recovered: " << std::dec << aux.size() << std::endl << std::endl;
 
