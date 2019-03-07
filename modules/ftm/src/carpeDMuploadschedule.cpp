@@ -361,6 +361,7 @@ using namespace DotStr::Misc;
     ewChg = gatherUploadVector(moddedCpus, 0, opType); //TODO not using modCnt right now, maybe implement later
     deactivateOrphanedCommands(ewOrphans, vQr);
     /*
+    //Simulate orphan cleanup memory corruption bug
     const  int dummy = 8;
     ewOrphans.va.push_back(ewChg.va[dummy]);
     ewOrphans.vb.push_back(0xDE);
@@ -387,11 +388,12 @@ using namespace DotStr::Misc;
       dati+=4;  
     }
     if (sDebug.size()  > 0) {
-      throw std::runtime_error("Possible access violation: Orphaned command cleanup routine tried to overwrite otherwise modified nodes. List of conflicting EB write ops:\n" + sDebug);
+      sErr << "Possible access violation: Orphaned command cleanup routine tried to overwrite otherwise modified nodes. List of conflicting EB write ops:\n" << sDebug << std::endl;
+      //throw std::runtime_error("Possible access violation: Orphaned command cleanup routine tried to overwrite otherwise modified nodes. List of conflicting EB write ops:\n" + sDebug);
     
     }  
       
-    ew = ewChg + ewOrphans;
+    ew = ewOrphans + ewChg;
 
     //Upload
     ebd.writeCycle(ew.va, ew.vb, ew.vcs);
