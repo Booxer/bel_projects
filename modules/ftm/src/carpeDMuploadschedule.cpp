@@ -356,15 +356,49 @@ using namespace DotStr::Misc;
     for(unsigned int i = 0; i < atUp.getMemories().size(); i++) {
       if (!freshDownload || (atUp.getMemories()[i].getBmp() != atDown.getMemories()[i].getBmp()) ) moddedCpus.insert(i); // mark cpu as modified if alloctable empty or Bmp Changed
     }
-
+    vEbwrs ew, ewChg, ewOrphans;
     generateMgmtData();
-    vEbwrs ew = gatherUploadVector(moddedCpus, 0, opType); //TODO not using modCnt right now, maybe implement later
-    deactivateOrphanedCommands(ew, vQr);
+    ewChg = gatherUploadVector(moddedCpus, 0, opType); //TODO not using modCnt right now, maybe implement later
+    deactivateOrphanedCommands(ewOrphans, vQr);
+    /*
+    const  int dummy = 8;
+    ewOrphans.va.push_back(ewChg.va[dummy]);
+    ewOrphans.vb.push_back(0xDE);
+    ewOrphans.vb.push_back(0xAD);
+    ewOrphans.vb.push_back(0xBE);
+    ewOrphans.vb.push_back(0xEF);
+    ewOrphans.vcs.push_back(ewChg.vcs[dummy]);
+    */
+    std::string sDebug;
+    auto adri = ewOrphans.va.begin();
+    auto dati = ewOrphans.vb.begin();
+    while (adri != ewOrphans.va.end() and dati != ewOrphans.vb.end())
+    {
+      auto adr = adri;
+      auto dat = dati;
+      uint8_t b[4] = {*(dat+0), *(dat+1), *(dat+2), *(dat+3)};
+      if(std::find(ewChg.va.begin(), ewChg.va.end(), *adr) != ewChg.va.end()) {
+        std::stringstream auxstream;
+        uint32_t val = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b[0]);
+        auxstream << "A 0x" << std::setfill('0') << std::setw(10) << std::hex << *adr << " D 0x" << std::setfill('0') << std::setw(10) << std::hex << val << std::endl;
+        sDebug += auxstream.str();
+      }
+      adri++;
+      dati+=4;  
+    }
+    if (sDebug.size()  > 0) {
+      throw std::runtime_error("Possible access violation: Orphaned command cleanup routine tried to overwrite otherwise modified nodes. List of conflicting EB write ops:\n" + sDebug);
+    
+    }  
+      
+    ew = ewChg + ewOrphans;
+
     //Upload
     ebd.writeCycle(ew.va, ew.vb, ew.vcs);
     if(verbose) sLog << "Done." << std::endl;
     freshDownload = false;
     return ew.va.size();
+    
   }
 
   void CarpeDM::baseUploadOnDownload() {
