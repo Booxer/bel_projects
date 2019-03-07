@@ -378,10 +378,23 @@ using namespace DotStr::Misc;
       auto adr = adri;
       auto dat = dati;
       uint8_t b[4] = {*(dat+0), *(dat+1), *(dat+2), *(dat+3)};
-      if(std::find(ewChg.va.begin(), ewChg.va.end(), *adr) != ewChg.va.end()) {
+      auto iHit = std::find(ewChg.va.begin(), ewChg.va.end(), *adr);
+
+      if(iHit != ewChg.va.end()) {
         std::stringstream auxstream;
         uint32_t val = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b[0]);
-        auxstream << "A 0x" << std::setfill('0') << std::setw(10) << std::hex << *adr << " D 0x" << std::setfill('0') << std::setw(10) << std::hex << val << std::endl;
+        auto idx = (iHit - ewChg.va.begin()) * 4;
+      /*
+        ewChg.vb[idx+0] = 0xca;
+        ewChg.vb[idx+1] = 0xfe;
+        ewChg.vb[idx+2] = 0xba;
+        ewChg.vb[idx+3] = 0xbe;
+*/
+        uint8_t b1[4] = {ewChg.vb[idx+0], ewChg.vb[idx+1], ewChg.vb[idx+2], ewChg.vb[idx+3]};
+ 
+        uint32_t hitval = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b1[0]);
+ 
+        auxstream << " A 0x" << std::setfill('0') << std::setw(8) << std::hex << *adr << " D 0x" << std::setfill('0') << std::setw(8) << std::hex << val << " Destroys: 0x" << std::setfill('0') << std::setw(8) << std::hex << hitval << std::endl;
         sDebug += auxstream.str();
       }
       adri++;
