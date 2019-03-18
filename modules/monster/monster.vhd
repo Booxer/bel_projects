@@ -423,7 +423,6 @@ architecture rtl of monster is
   constant c_devs_watchdog       : natural := 1;
   constant c_devs_flash          : natural := 2;
   constant c_devs_reset          : natural := 3;
---  constant c_devs_ebm            : natural := 4;
   constant c_devs_tlu            : natural := 4;
   constant c_devs_eca_ctl        : natural := 5;
   constant c_devs_eca_aq         : natural := 6;
@@ -1124,8 +1123,8 @@ begin
       ebs_cfg_slave_i => wrc_master_o,
       ebs_wb_master_o => top_bus_slave_i (c_topm_ebs),
       ebs_wb_master_i => top_bus_slave_o (c_topm_ebs),
-      ebm_wb_slave_i  => top_bus_master_o(c_devs_ebm),
-      ebm_wb_slave_o  => top_bus_master_i(c_devs_ebm));
+      ebm_wb_slave_i  => top_bus_master_o(c_tops_ebm),
+      ebm_wb_slave_o  => top_bus_master_i(c_tops_ebm));
 
 
   lm32 : ftm_lm32_cluster
