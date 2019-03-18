@@ -360,16 +360,16 @@ using namespace DotStr::Misc;
     generateMgmtData();
     ewChg = gatherUploadVector(moddedCpus, 0, opType); //TODO not using modCnt right now, maybe implement later
     deactivateOrphanedCommands(ewOrphans, vQr);
-    /*
+  /*  
     //Simulate orphan cleanup memory corruption bug
-    const  int dummy = 8;
+    const  int dummy = 14;
     ewOrphans.va.push_back(ewChg.va[dummy]);
     ewOrphans.vb.push_back(0xDE);
     ewOrphans.vb.push_back(0xAD);
     ewOrphans.vb.push_back(0xBE);
     ewOrphans.vb.push_back(0xEF);
     ewOrphans.vcs.push_back(ewChg.vcs[dummy]);
-    */
+   /
     std::string sDebug;
     auto adri = ewOrphans.va.begin();
     auto dati = ewOrphans.vb.begin();
@@ -384,12 +384,12 @@ using namespace DotStr::Misc;
         std::stringstream auxstream;
         uint32_t val = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b[0]);
         auto idx = (iHit - ewChg.va.begin()) * 4;
-      /*
+      
         ewChg.vb[idx+0] = 0xca;
         ewChg.vb[idx+1] = 0xfe;
         ewChg.vb[idx+2] = 0xba;
         ewChg.vb[idx+3] = 0xbe;
-*/
+
         uint8_t b1[4] = {ewChg.vb[idx+0], ewChg.vb[idx+1], ewChg.vb[idx+2], ewChg.vb[idx+3]};
  
         uint32_t hitval = writeBeBytesToLeNumber<uint32_t>((uint8_t*)&b1[0]);
@@ -405,8 +405,8 @@ using namespace DotStr::Misc;
       //throw std::runtime_error("Possible access violation: Orphaned command cleanup routine tried to overwrite otherwise modified nodes. List of conflicting EB write ops:\n" + sDebug);
     
     }  
-      
-    ew = ewOrphans + ewChg;
+*/      
+    ew = ewOrphans + ewChg; //order is critical !!!
 
     //Upload
     ebd.writeCycle(ew.va, ew.vb, ew.vcs);
