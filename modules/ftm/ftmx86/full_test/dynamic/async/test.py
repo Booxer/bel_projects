@@ -12,8 +12,8 @@ testcase = TestCase(
     Op("Test1_3_Queue", "cmd", "rawqueue BLOCK_B", "0", None, "test1_3_exp.txt", "cmdqty",),
     Op("Test1_4_flow", "cmd", "-i", "0",                        "test1_0c_cmd.dot"),
     Op("Test1_5_Queue", "cmd", "rawqueue BLOCK_B", "0", None, "test1_5_exp.txt", ["reltime", "cmdqty"],),
-    Op("Test1_6_unlock", "cmd", "-i", "0.0",                    "test1_0d_cmd.dot"),
-    Op("Test1_7_CheckVis", "sched", "rawvisited", "1.0", None,  "test1_7_exp.txt"),
+    Op("Test1_6_unlock", "cmd", "-i", "1.0",                    "test1_0d_cmd.dot"),
+    Op("Test1_7_CheckVis", "sched", "rawvisited", "2.0", None,  "test1_7_exp.txt"),
     Op("Test1_8_CheckLock", "cmd", "showlocks", "0", None,      "test1_8_exp.txt"),
     Op("Test1_9_Queue", "cmd", "rawqueue BLOCK_B", "0", None, "test1_9_exp.txt", ["reltime", "cmdqty"],)
   ]
