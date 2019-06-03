@@ -63,6 +63,7 @@ void dmInit() {
   nodeFuncs[NODE_TYPE_TMSG]             = tmsg;
   nodeFuncs[NODE_TYPE_CNOOP]            = cmd;
   nodeFuncs[NODE_TYPE_CFLOW]            = cmd;
+  nodeFuncs[NODE_TYPE_CSWITCH]          = cswitch;  
   nodeFuncs[NODE_TYPE_CFLUSH]           = cmd;
   nodeFuncs[NODE_TYPE_CWAIT]            = cmd;
   nodeFuncs[NODE_TYPE_BLOCK_FIXED]      = blockFixed;
@@ -220,6 +221,8 @@ uint32_t* execFlush(uint32_t* node, uint32_t* cmd, uint32_t* thrData) {
 
 }
 
+
+
 uint32_t* execWait(uint32_t* node, uint32_t* cmd, uint32_t* thrData) {
 
   // the block period is added in blockFixed or blockAligned.
@@ -247,7 +250,7 @@ uint32_t* cmd(uint32_t* node, uint32_t* thrData) {
         uint32_t *ret = (uint32_t*)node[NODE_DEF_DEST_PTR >> 2];
   const uint32_t prio = (node[CMD_ACT >> 2] >> ACT_PRIO_POS) & ACT_PRIO_MSK;
   const uint32_t *tg  = (uint32_t*)node[CMD_TARGET >> 2];
-  const uint32_t adrPrefix = (uint32_t)tg & 0xffff0000; // if target is on a different RAM, all ptrs must be translated from the local to our (peer) perspective
+  const uint32_t adrPrefix = (uint32_t)tg & PEER_ADR_MSK; // if target is on a different RAM, all ptrs must be translated from the local to our (peer) perspective
 
   uint32_t *bl, *b, *e;
   uint8_t  *wrIdx;
@@ -304,6 +307,27 @@ uint32_t* cmd(uint32_t* node, uint32_t* thrData) {
   e[(T_CMD_ACT + 2 * _32b_SIZE_) >> 2]  = node[(CMD_ACT + 2 * _32b_SIZE_) >> 2];
 
   *wrIdx = (*wrIdx + 1) & Q_IDX_MAX_OVF_MSK; //increase write index
+
+  DBPRINT2("#%02u: Sending Cmd 0x%08x, Target: 0x%08x, next: 0x%08x\n", cpuId, node[NODE_HASH >> 2], (uint32_t)tg, node[NODE_DEF_DEST_PTR >> 2]);
+  return ret;
+}
+
+uint32_t* cswitch(uint32_t* node, uint32_t* thrData) {
+        uint32_t *ret = (uint32_t*)node[NODE_DEF_DEST_PTR >> 2];
+        uint32_t *tg  = (uint32_t*)node[CMD_TARGET >> 2];
+  const uint32_t adrPrefix = (uint32_t)tg & PEER_ADR_MSK; // if target is on a different RAM, all ptrs must be translated from the local to our (peer) perspective
+
+  node[NODE_FLAGS >> 2] |= NFLG_PAINT_LM32_SMSK; // set paint bit to mark this node as visited
+
+  // check if the target is a null pointer, if so abort. Used to allow removal of pattern containing target nodes
+  if(tg == LM32_NULL_PTR) { return ret; }
+
+  //check if the target queues are write locked
+  const uint32_t qFlags = tg[BLOCK_CMDQ_FLAGS >> 2];
+  if(qFlags & BLOCK_CMDQ_DNW_SMSK) { return ret; }
+  
+  //overwrite target defdst
+  tg[NODE_DEF_DEST_PTR >> 2] = (uint32_t)node[CMD_SWITCH_DEST >> 2] - INT_BASE_ADR + adrPrefix;
 
   DBPRINT2("#%02u: Sending Cmd 0x%08x, Target: 0x%08x, next: 0x%08x\n", cpuId, node[NODE_HASH >> 2], (uint32_t)tg, node[NODE_DEF_DEST_PTR >> 2]);
   return ret;
