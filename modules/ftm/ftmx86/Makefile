@@ -20,7 +20,7 @@ SER_LIB         =-lboost_serialization
 GRAPH_LIB       =-lboost_graph
 TOP            ?= ../../..
 
-VERSION_FW     = 6.2
+VERSION_FW     = 6.2.0
 VERSION_TOOL   = 0.32.0
 
 BUILD_DATE     = $(shell date +'%Y%m%d')

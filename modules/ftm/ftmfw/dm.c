@@ -81,6 +81,7 @@ void dmInit() {
   deadlineFuncs[NODE_TYPE_TMSG]         = dlEvt;
   deadlineFuncs[NODE_TYPE_CNOOP]        = dlEvt;
   deadlineFuncs[NODE_TYPE_CFLOW]        = dlEvt;
+  deadlineFuncs[NODE_TYPE_CSWITCH]      = dlEvt; 
   deadlineFuncs[NODE_TYPE_CFLUSH]       = dlEvt;
   deadlineFuncs[NODE_TYPE_CWAIT]        = dlEvt;
   deadlineFuncs[NODE_TYPE_BLOCK_FIXED]  = dlBlock;
@@ -314,10 +315,12 @@ uint32_t* cmd(uint32_t* node, uint32_t* thrData) {
 
 uint32_t* cswitch(uint32_t* node, uint32_t* thrData) {
         uint32_t *ret = (uint32_t*)node[NODE_DEF_DEST_PTR >> 2];
-        uint32_t *tg  = (uint32_t*)node[CMD_TARGET >> 2];
+        node[NODE_FLAGS >> 2] |= NFLG_PAINT_LM32_SMSK; // set paint bit to mark this node as visited
+  
+        uint32_t *tg  = (uint32_t*)node[SWITCH_TARGET >> 2];
   const uint32_t adrPrefix = (uint32_t)tg & PEER_ADR_MSK; // if target is on a different RAM, all ptrs must be translated from the local to our (peer) perspective
 
-  node[NODE_FLAGS >> 2] |= NFLG_PAINT_LM32_SMSK; // set paint bit to mark this node as visited
+  
 
   // check if the target is a null pointer, if so abort. Used to allow removal of pattern containing target nodes
   if(tg == LM32_NULL_PTR) { return ret; }
@@ -327,9 +330,10 @@ uint32_t* cswitch(uint32_t* node, uint32_t* thrData) {
   if(qFlags & BLOCK_CMDQ_DNW_SMSK) { return ret; }
   
   //overwrite target defdst
-  tg[NODE_DEF_DEST_PTR >> 2] = (uint32_t)node[CMD_SWITCH_DEST >> 2] - INT_BASE_ADR + adrPrefix;
+  tg[NODE_DEF_DEST_PTR >> 2] = (uint32_t)node[SWITCH_DEST >> 2];
 
   DBPRINT2("#%02u: Sending Cmd 0x%08x, Target: 0x%08x, next: 0x%08x\n", cpuId, node[NODE_HASH >> 2], (uint32_t)tg, node[NODE_DEF_DEST_PTR >> 2]);
+  
   return ret;
 }
 

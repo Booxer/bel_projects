@@ -46,7 +46,7 @@ namespace DotStr {
       const std::string sAltDst       = "altdst";     // Links to Alternative Destination
       const std::string sBadDefDst    = "baddefdst";  // Links to Bad Default Destination
       const std::string sCmdTarget    = "target";     // Links to Command's Target Block
-      const std::string sSwitchTarget = "switch";     // Links to Switch's Target 
+      const std::string sSwitchTarget = "target";     // Links to Switch's Target 
       const std::string sSwitchDst    = "switchdst";     // Links to Switch's Target Block
       const std::string sCmdFlowDst   = "flowdst";    // Links to Flow Command's destination node
       const std::string sCmdFlushOvr  = "flushovr";   // Links to Flush Command's destination overrride

@@ -215,7 +215,7 @@ void VisitorDownloadCrawler::visit(const DestList& el) const {
       }
     }
     if (!defaultValid) { //default destination was not in alt dest list. that shouldnt happen ... draw it in
-      sErr << "!!! DefDest not in AltDestList. Means someone set an arbitrary pointer for DefDest !!!" << std::endl;
+      sErr << "!!! DefDest Adr " << std::hex << "0x" << defAdr << " not in AltDestList. Means someone set an arbitrary pointer for DefDest !!!" << std::endl;
       if (defAdr != LM32_NULL_PTR) {
         try {
           auto x = at.lookupAdr(cpu, defAdr);

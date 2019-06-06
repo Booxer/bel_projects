@@ -71,10 +71,13 @@ public:
 
 };
 
+
+
 // Similar to a command, but no queueing and no overhead. meant for direct atomic dest pointer manipulation
 class Switch : public Event {
 public:
-  Switch(const std::string& name, const std::string&  pattern, const std::string&  beamproc, const uint32_t& hash, const uint8_t& cpu, uint32_t flags, uint64_t tOffs) : Event(name, pattern, beamproc, hash, cpu, flags, tOffs) {}
+  Switch(const std::string& name, const std::string&  pattern, const std::string&  beamproc, const uint32_t& hash, const uint8_t& cpu, uint32_t flags, uint64_t tOffs) 
+  : Event(name, pattern, beamproc, hash, cpu, ((flags & ~NFLG_TYPE_SMSK) | (NODE_TYPE_CSWITCH << NFLG_TYPE_POS)), tOffs) {}
   Switch(const std::string& name, const std::string&  pattern, const std::string&  beamproc, const uint32_t& hash, const uint8_t& cpu, uint32_t flags) : Event(name, pattern, beamproc, hash, cpu, flags) {}
   Switch(const Switch& src) : Event(src) {}
 
