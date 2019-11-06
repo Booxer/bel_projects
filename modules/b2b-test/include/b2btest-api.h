@@ -3,7 +3,7 @@
  *
  *  created : 2019
  *  author  : Dietrich Beck, GSI-Darmstadt
- *  version : 15-April-2019
+ *  version : 05-November-2019
  *
  * API for b2btest
  *
@@ -37,7 +37,7 @@
 #ifndef _B2B_TEST_API_H_
 #define _B2B_TEST_API_H_
 
-#define B2BTEST_X86_VERSION "0.0.7"
+#define B2BTEST_X86_VERSION "0.0.11"
 
 #include <b2b-test.h>
 #include <etherbone.h>

@@ -3,7 +3,7 @@
  *
  *  created : 2018
  *  author  : Dietrich Beck, GSI-Darmstadt
- *  version : 05-July-2019
+ *  version : 05-November-2019
  *
  *  implementation for b2btest
  * 
