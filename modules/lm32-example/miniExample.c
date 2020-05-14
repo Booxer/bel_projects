@@ -3,7 +3,7 @@
  *
  *  created : 2017
  *  author  : Mathias Kreider,  Dietrich Beck, GSI-Darmstadt
- *  version : 23-Mar-2017
+ *  version : 14-May-2020
  *
  *  very basic example program for lm32 softcore on GSI timing receivers
  * 
@@ -40,12 +40,13 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>
-#include "pp-printf.h"
-#include "mini_sdb.h"
 
 /* includes specific for bel_projects */
-#include "aux.h"
-#include "dbg.h"
+#include "pp-printf.h"                                    // print function; please use 'pp_printf' instead of 'printf'
+#include "mini_sdb.h"                                     // required for using Wisbhone self-describing bus from lm32
+
+#include "aux.h"                                          // CPU and IRQ
+#include "uart.h"                                         // WR console
 
 /* shared memory map for communication via Wishbone  */
 #include "miniExample_shared_mmap.h"
@@ -58,20 +59,23 @@ uint64_t SHARED dummy = 0;
 
 void init(){
   discoverPeriphery();   // mini-sdb: get info on important Wishbone infrastructure
-  uart_init_hw();        // init UART, required for printf... 
+  uart_init_hw();        // init UART, required for pp_printf...
   cpuId = getCpuIdx();   // get ID of THIS CPU 
 } // init
 
 void main(void) {
   int j;
-  
+  uint64_t t1,t2;
+
   init();
-  
+
   // wait 1 second and print initial message to UART
   // pro tip: try 'eb-console' to view printed messages
   for (j = 0; j < (31000000); ++j) { asm("nop"); } // 31.25 x 'asm("nop")' operations take 1 us.
   pp_printf("Hello World!\n");
 
+  //  printConsts();
+  
   while (1) {
     pp_printf("boring...\n");
     for (j = 0; j < (31000000); ++j) { asm("nop"); }
