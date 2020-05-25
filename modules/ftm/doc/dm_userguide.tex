@@ -279,7 +279,7 @@ To allow parrallel operation, there are as many command queues as there are poin
 \subsection{Blocks and Changes during Runtime}
 For blocks to be used dynamically, they need to act as a sink for commands. This is enabled by adding command queues to the block. Up to three priorities are supported, forming a single priority queue. When a block is processed, it will only ever execute a single command and will always choose the highest priority pending.
 \par
-Commands themselves are in fact command generators, each represents $0\dots n$ repetions of a command. Although only certain command type can be (sensibly) executed multiple times, all commands share the generator trait. This means they are functions which have an internal state (their repetition counter, aka quantity). Such a command generator will yield the same command every time it is executed until its quantity reaches zero. Generators with a quantity of zero are exhausted and popped from the queue. This behavior is required for the use of commands as loop initialisers, see~\ref{xxx2}.
+Commands themselves are in fact command generators, each represents $0\dots n$ repetions of a command. Although only certain command types can be (sensibly) executed multiple times, all commands share the generator trait. This means they are functions which have an internal state (their repetition counter, aka quantity). Such a command generator will yield the same command every time it is executed until its quantity reaches zero. Generators with a quantity of zero are exhausted and popped from the queue. This behavior is required for the use of commands as loop initialisers, see~\ref{subsec:Loop-Example}.
 
 \begin{figure}[H]
   \centering
@@ -531,6 +531,7 @@ The host sets a lock, and checks the queue indices in regular intervals until no
 
 
 \subsection{Counter Loop Example}
+\label{subsec:Loop-Example}
 %
 \begin{figure}[H]
    \centering

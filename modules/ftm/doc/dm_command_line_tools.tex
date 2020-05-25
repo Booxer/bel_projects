@@ -1,3 +1,5 @@
+\subsection{Tool dm-cmd}
+\label{Tool_dm-cmd}
 \begin{lstlisting}[style = helptext]
 dm-cmd v0.33.4, build date 20200206
 Sends a command or dotfile of commands to the DM
@@ -56,18 +58,18 @@ General Options:
                             Does reverse lookup of current pattern, 
                             prone to race condition
   abort                     Immediately abort selected thread.
-  halt                      Immediately aborts all threads on all cpus
-  lock <target>             Locks all queues of a block, making 
-                            them invisible to the DM and allowing 
-                            modification during active runtime
+  halt                      Immediately aborts all threads on all CPUs.
+  lock <target>             Locks all queues of a block for asynchronous
+                            queue manipulation mode. This makes the
+                            queues invisible to the DM and allowing 
+                            modification during active runtime. 
+                            ACTIVE LOCK MEANS DM WILL NEITHER WRITE TO 
+                            NOR READ FROM THIS BLOCK'S QUEUES!
   clear <target>            Clears all queues of a locked block 
                             allowing modification/refill during 
-                            active runtime
+                            active runtime.
   unlock <target>           Unlocks all queues of a block, making 
-                            them visible to the DM
-(duplicate)  lock <target>  Locks a block for asynchronous queue 
-                            manipulation mode.
-ACTIVE LOCK MEANS DM WILL NEITHER WRITE TO NOR READ FROM THIS BLOCK'S QUEUES!
+                            them visible to the DM.
   asyncflush <target>  <prios>         Flushes all pending commands 
                             of given priorities (3b Hi-Md-Lo -> 
                             0x0..0x7) in an locked block of the schedule
@@ -84,25 +86,24 @@ ACTIVE LOCK MEANS DM WILL NEITHER WRITE TO NOR READ FROM THIS BLOCK'S QUEUES!
                             0x0..0x7) in an inactive (static) 
                             pattern of the schedule
   force                                (ToDo)
-  rawvisited                           (ToDo)
+  rawvisited [<target>]     Show 1 for a visited node, 0 for not visited.
+                            If no target node is given, show all nodes.
 
 Queued commands (viable options in square brackets):
-  stop <target>                        [laps]   Request stop at 
+  stop <target> [laps]                 Request stop at 
                                        selected block (flow to idle)
-  stoppattern  <pattern>               [laps]   Request stop of 
-                                       selected pattern
-  noop <target>                        [lapq]   Placeholder to stall
-                                       succeeding commands, has no 
-                                       effect itself
+  stoppattern  <pattern> [laps]        Request stop of selected pattern
+  noop <target> [lapq]                 Placeholder to stall succeeding
+                                       commands, has no effect itself
   flow <target> <destination node>     [lapqs]  Changes schedule 
                                        flow to <Destination Node>
   flowpattern <target pat.> <dst pat.> [lapqs]  Changes schedule 
                                        flow to <Destination Pattern>
-  relwait <target> <wait time / ns>    [laps]   Changes Block period
+  relwait <target> <wait time / ns> [laps] Changes Block period
                                        to <wait time>
-  abswait <target> <wait time / ns>    [lap]    Stretches Block 
+  abswait <target> <wait time / ns> [lap] Stretches Block 
                                        period until <wait time>
-  flush <target> <prios>               [lap]    Flushes all pending
+  flush <target> <prios> [lap]         Flushes all pending
                                        commands of given priorities 
                                        (3b, 0x0..0x7) le cmd priority
 Options for queued commands:
@@ -139,6 +140,8 @@ Diagnostics:
                                      given index
 \end{lstlisting}
 
+\subsection{Tool dm-sched}
+\label{Tool_dm-sched}
 \begin{lstlisting}[style = helptext]
 dm-sched v0.33.4, build date 20200206
 Creates Binary Data for the DataMaster (DM) from Schedule Graphs
