@@ -585,3 +585,30 @@ Figure~\ref{fig:excntloop-alternate} shows how to achieve this with static flow 
 The default pattern will run in a loop. If made to flow to pattern A, pattern A will then send a command to the default pattern to go to pattern B next.
 After one execution of the default pattern, B is executed, sending a command to the default pattern with pattern A as the successor, and so on.
 To leave this sequence, one would send a flush command to the default pattern at medium priority, after which the schedule would loop the default pattern.
+
+\subsection{Priority Queues}
+A block node may have three command queues with different priority: low, high, and inter lock. Each of these queues has four places for commands.
+\begin{center}
+  \begin{tabular}{| l | l | l |}
+    \hline
+Attribute & Description & Value Range \\ \hline
+PRIO\_AVL & & \\ \hline
+RI & read index in queue & 0..3 \\ \hline
+WI & write index in queue & 0..3 \\ \hline
+PC & & \\ \hline
+PEN & command is pending & 0..1 (False, True) \\ \hline
+ORPH & command queue has been deleted, & 0..1 (False, True) \\
+& command is orphaned & \\ \hline
+VABS & valid time is an absolute time & \\ \hline
+VTIME & valid time & \\ \hline
+TYPE & type of command (number) & \\ \hline
+STYPE & type of command (string) & \\ \hline
+QTY & repetition quantity of command & \\ \hline
+FLOWDST & flow destination node & \\ \hline
+FLOWDSTPAT & flow destination pattern & \\ \hline
+PERMA & command effect is permanent & 0..1 (False, True) \\ \hline
+FPRIO & &  \\ \hline
+WABS & wait time is absolute (only for wait commands) & \\ \hline
+WTIME & wait time (only for wait commands) & \\ \hline
+  \end{tabular}
+\end{center}

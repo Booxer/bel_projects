@@ -90,7 +90,7 @@ For each test the data master is halted and cleared. All patterns are removed.
 \begin{enumerate}
 	\item Purpose of Test
 
-The test check the relative and the absolute time values for two nodes in a four node pattern. 
+The test checks the relative and the absolute time values for two nodes in a four node pattern. 
 See Figure~\ref{fig:Pattern_for_the_static_priority_and_type_test} for the test pattern 
 and \ref{fig:Pattern_for_the_static_priority_and_type_test_with_meta_nodes} for the test pattern with meta nodes, 
 displaying the priority queues.
@@ -118,8 +118,17 @@ displaying the priority queues.
 \begin{enumerate}
 	\item Purpose of Test
 
+	For a schedule asynchronous clear a block, change the destination to a timing message and check that all nodes are visited.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_async_test} for the test pattern.
 	\item Test Actions
+
+	Upload test schedule and start pattern $LOOP$. Check with \texttt{dm-cmd rawvisited}. The 
+	nodes 'BLOCK\_B', 'BLOCK\_LOOP', 'CMD\_LOOP' are visited. Lock pattern 'B' (this locks 'BLOCK\_B'), check this with 
+	\texttt{showlocks}. Clear pattern 'B' which clears the queues of 'BLOCK\_B', check this with \texttt{rawqueue}. 
+	Change schedule with flow command. Destination of 'BLOCK\_B' is now 'MSG\_A' for one message. Check this 
+	with \texttt{rawqueue}. Unlock pattern 'B', wait for $1.2$ seconds and then check with \texttt{rawvisited} that all 
+	nodes are visited and no blocks are locked (with \texttt{showlocks}).
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_async.pdf}
@@ -127,14 +136,21 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_async_test}
     \end{figure}
 	\item Success Criteria
+	
+	Check that node 'MSG\_A' is visited after changing the destination of the flow.
 \end{enumerate}
 \subsection{Basic}
 \subsubsection{Run CPU 0 single}
 \begin{enumerate}
 	\item Purpose of Test
 
+    Add the test schedule to the data master, start patterns and check which nodes were visited.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_run_CPU_0_single_test} for the test pattern.
 	\item Test Actions
+    
+    First check that no block is visited. Start pattern 'IN0'. Check that 'BLOCK\_A' and 'BLOCK\_IN0' are visited. 
+    Start pattern 'IN1'. Check that in addition 'BLOCK\_B' and 'BLOCK\_IN1' are visited.
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_basic_run_cpu0_single.pdf}
@@ -142,13 +158,20 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_run_CPU_0_single_test}
     \end{figure}
 	\item Success Criteria
+
+	In the end all blocks are visited.
 \end{enumerate}
 \subsubsection{Run all single}
 \begin{enumerate}
 	\item Purpose of Test
 
+    Run a very basic schedule on all four CPUs.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_run_all_test} for the test pattern.
 	\item Test Actions
+
+	Add a schedule with four blocks to the data master. For each CPU, check that no block is visited. Then start 
+	a pattern for one CPU and check that the block specific for this pattern is visited.
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_basic_run_all_single.pdf}
@@ -156,13 +179,22 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_run_all_test}
     \end{figure}
 	\item Success Criteria
+
+	For each pattern the correct CPU is used.
 \end{enumerate}
 \subsubsection{Start Stop Abort}
 \begin{enumerate}
 	\item Purpose of Test
 
+    First part: Start and abort a pattern. Second part: Start and stop a pattern.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_start_stop_abort_test} for the test pattern.
 	\item Test Actions
+    
+    Add a schedule, check that CPU 0 is idle and then start pattern 'IN\_C0'. Check that the pattern is running. 
+    Abort the pattern 'IN\_C0'. Check the visited nodes for the pattern. The second part is similar. 
+    Add the same schedule, check that CPU 0 is idle and then start pattern 'IN\_C0'. Check that the pattern is running. 
+    Stop the pattern 'IN\_C0'. Check the visited nodes for the pattern.
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_basic_start_stop_abort.pdf}
@@ -170,14 +202,21 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_start_stop_abort_test}
     \end{figure}
 	\item Success Criteria
+
+	Check that pattern is correctly aborted (rawstatus RUN is 0 immediately) or 
+	stopped (rawstatus RUN is 1 immediately, but 0 after 1.5 seconds).
 \end{enumerate}
 \subsection{Branch}
 \subsubsection{Single}
 \begin{enumerate}
 	\item Purpose of Test
 
+	Test that the flow command switches from one block to another.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_branch_single_test} for the test pattern.
 	\item Test Actions
+
+	Add a schedule, start the pattern 'IN\_C0'. After checking that nodes 'BLOCK\_IN0' and 'BLOCK\_A' are visited, change the flow with the flowpattern command at pattern 'IN\_C0' from 'A' to 'B'. Check that the flowpattern command is in the low priority queue and then start the pattern 'IN\_C0'. Check that the flowpattern command is processed in the low priority queue and node 'BLOCK\_B' is visited.
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_branch_single.pdf}
@@ -185,6 +224,8 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_branch_single_test}
     \end{figure}
 	\item Success Criteria
+
+	Changing flow from 'BLOCK\_A' to 'BLOCK\_B' works.
 \end{enumerate}
 \subsection{Coupling}
 \begin{enumerate}
@@ -198,8 +239,12 @@ displaying the priority queues.
 \begin{enumerate}
 	\item Purpose of Test
 
+    Test loop with flow initialiser.
+
 	See Figure~\ref{fig:Pattern_for_the_dynamic_loop_test} for the test pattern.
 	\item Test Actions
+
+    Add a schedule and start pattern 'IN\_A'. Check the visited nodes. Nodes 'INIT\_A0', 'BLOCK\_LOOP', and 'BLOCK\_EXIT' should be visited. Start pattern 'IN\_B' and check the visited nodes. All nodes should be visited.
     \begin{figure}
         \centering 
         \includegraphics{TestPattern/dynamic_loop.pdf}
@@ -207,6 +252,8 @@ displaying the priority queues.
         \label{fig:Pattern_for_the_dynamic_loop_test}
     \end{figure}
 	\item Success Criteria
+
+	In the end all blocks are visited.
 \end{enumerate}
 \subsection{Switch}
 \begin{enumerate}
