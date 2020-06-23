@@ -1,0 +1,14 @@
+digraph g {
+name="123!CMD!";
+
+graph []
+
+
+  CMD_0STOP   [pos="0,0" type="stop", pattern="ABC"];
+  CMD_1FLOW0  [pos="0,72" type="flow", pattern="PPS", destpattern="ABC"];
+  CMD_2FLOW1  [pos="216,0" type="flow", pattern="TEST_DO_SIS18_HTP_20171013", destpattern="PPS"];
+  CMD_3START  [pos="216,72" type="start", pattern="TEST_DO_SIS18_HTP_20171013"];
+  //CMD_STOP   [type="stop", pattern="TEST_DO_SIS18_HTP_20171013"];
+  //CMD_ABORT   [type="abort", cpu="0", thread="0"];
+  //CMD_ABORT   [type="abort", pattern="TEST_DO_SIS18_HTP_20171013"];
+}

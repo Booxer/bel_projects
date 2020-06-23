@@ -1,0 +1,27 @@
+digraph g {
+name="helloadv";
+
+graph []
+edge  [type="defdst"]
+
+
+
+subgraph cpu0 {
+  node  [cpu="1", style="filled", fillcolor="red", color="black"];
+
+
+
+
+  Evt_D  [pos="0,144" type="tmsg",   toffs=          0,   fid=0, gid=5, evtno=205, sid=2, bpid=8, par="0x123", shape="oval"];
+  B_D     [pos="0,72" type="block",  tperiod=1000000000];
+ B_0 [pos="0,216"]
+ Evt_0 [pos="0,0"]
+  Evt_D -> B_D -> Evt_0;
+  B_0 -> Evt_D [type="altdst"];
+
+
+
+}
+
+
+}

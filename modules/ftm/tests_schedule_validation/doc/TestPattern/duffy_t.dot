@@ -1,7 +1,5 @@
-digraph g {
-name="dummy";
-
-graph [ root="Evt_BREQ_00",  rankdir=TB, nodesep=0.6, mindist=0.6, ranksep=0.6, overlap=false]
+digraph G {
+graph [label="UniPZ", root="Evt_BREQ_00",  rankdir=TB, nodesep=0.6, mindist=0.6, ranksep=0.6, overlap=false]
 node [type="TMsg", shape="rectangle",  style="filled", fillcolor="white", color="black"]
 edge [type="defdst", color="red"]
 
@@ -11,12 +9,12 @@ Cmd_TKREQ_01        [shape="oval",             tOffs=300, type="Flow", color="ma
 Evt_TKREQ_DM        [type="TMsg",              tOffs=500, id="0x2222000000000000", par="0x0", shape="oval"];
 Evt_TKREQ_02        [type="TMsg",             tOffs=1000, id="0x0000000000000002", par="0x456", shape="oval"];
 B_TKREQ             [type="Block",        tPeriod=200000000];
-B_LOOP0             [type="Block",         tPeriod=10000];
+B_LOOP0             [type="Block",         tPeriod=100000];
 Evt_BREQ_00         [type="TMsg",                tOffs=0, id="0x0000000000000003", par="0x456", shape="oval"];
 Evt_BREQ_DM         [type="TMsg",             tOffs=2000, id="0x3333000000000000", par="0x456", shape="oval"];
 Evt_BREQ_01         [type="TMsg",             tOffs=9000, id="0x0000000000000004", par="0x456", shape="oval"];
 B_BREQ              [type="Block",        tPeriod=2000000];
-B_LOOP1             [type="Block",         tPeriod=10000];
+B_LOOP1             [type="Block",         tPeriod=100000];
 B_FLEXWAIT0         [type="Block",         tPeriod=71111];
 Evt_MULTI_MULTI_00  [type="TMsg",              tOffs=0,  id="0x0000000000000005", par="0x456", shape="oval"];
 Evt_MB_LOAD         [type="TMsg",              tOffs=200,  id="0x0000000000000006", par="0x456", shape="oval"];

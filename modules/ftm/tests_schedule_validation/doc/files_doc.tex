@@ -1,0 +1,326 @@
+\documentclass[12pt,a4paper]{report}
+% Language: English
+\pdfminorversion=7
+\usepackage[pdftex]{graphicx}
+
+\begin{document}
+
+\begin{titlepage}
+\vspace{2cm}
+\begin{center}
+\Huge{Notes on Files in Folder \texttt{modules/ftm/ftmx86}}
+
+\Large{Martin Skorsky}
+
+\Large{2020-06-18}
+\end{center}
+\vfill
+\end{titlepage}
+
+\tableofcontents
+
+\chapter{Description of Files}
+
+\begin{enumerate}
+\item dm-cmd, dm-cmd.cpp: Executable and source for data master command.
+\item dm-sched, dm-sched.cpp: Executable and source for data master schedule loader.
+\item full\_test - Folder with tests.
+\item Makefile
+\item carpedm\_doxy.conf: configuration for doxy
+\item dm-test.cpp: Source for data master test program.
+\item foo.cpp: C++ snippet, opens etherbone socket and device. Not clear where this is used.
+\item before.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/before.pdf}
+        \caption{before}
+        \label{fig:before}
+    \end{figure}
+\item blink-test.sh: data master test script with blink.dot
+\begin{verbatim}
+#!/bin/bash
+file=blink.dot
+
+eb-fwload $1 u0 0 ../ftmfw/ftm.bin
+sleep 1
+./dm-sched $1 $file -w
+sleep 1
+./dm-cmd $1 $file origin -t0 Evt_POLICE0
+./dm-cmd $1 $file origin -t1 Evt_FIREF0
+./dm-cmd $1 $file preptime -t0 1000000000
+./dm-cmd $1 $file preptime -t1 1000000000
+
+./dm-cmd $1 $file starttime -t0 0000000
+./dm-cmd $1 $file starttime -t1 0000000
+./dm-cmd $1 $file start 0x3
+sleep 1
+./dm-cmd $1 $file heap
+\end{verbatim}
+\item blink.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/blink.pdf}
+        \caption{blink}
+        \label{fig:blink}
+    \end{figure}
+\item cmd\_multipat.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/cmd_multipat.pdf}
+        \caption{cmd\_multipat}
+        \label{fig:cmd_multipat}
+    \end{figure}
+\item corrupted.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/corrupted.pdf}
+        \caption{corrupted}
+        \label{fig:corrupted}
+    \end{figure}
+\item duffy.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/duffy.pdf}
+        \caption{duffy}
+        \label{fig:duffy}
+    \end{figure}
+\item duffy\_t.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/duffy_t.pdf}
+        \caption{duffy\_t}
+        \label{fig:duffy_t}
+    \end{figure}
+\item inspect.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/inspect.pdf}
+        \caption{inspect}
+        \label{fig:inspect}
+    \end{figure}
+\item multipat.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/multipat.pdf}
+        \caption{multipat}
+        \label{fig:multipat}
+    \end{figure}
+\item multi\_schedule.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/multi_schedule.pdf}
+        \caption{multi\_schedule}
+        \label{fig:multi_schedule}
+    \end{figure}
+\item normal\_download.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/normal_download.pdf}
+        \caption{normal\_download}
+        \label{fig:normal_download}
+    \end{figure}
+\item pps.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/pps.pdf}
+        \caption{pps}
+        \label{fig:pps}
+    \end{figure}
+\item simple.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/simple.pdf}
+        \caption{simple}
+        \label{fig:simple}
+    \end{figure}
+\item sis\_hest.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/sis_hest.pdf}
+        \caption{sis\_hest}
+        \label{fig:sis_hest}
+    \end{figure}
+\item stripped\_download.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/stripped_download.pdf}
+        \caption{stripped\_download}
+        \label{fig:stripped_download}
+    \end{figure}
+\item test0\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/test0_0.pdf}
+        \caption{test0\_0}
+        \label{fig:test0_0}
+    \end{figure}
+\item test0\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test0_1.pdf}
+        \caption{test0\_1}
+        \label{fig:test0_1}
+    \end{figure}
+\item test1\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test1_0.pdf}
+        \caption{test1\_0}
+        \label{fig:test1_0}
+    \end{figure}
+\item test1\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test1_1.pdf}
+        \caption{test1\_1}
+        \label{fig:test1_1}
+    \end{figure}
+\item test1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test1.pdf}
+        \caption{test1}
+        \label{fig:test1}
+    \end{figure}
+\item test2\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test2_0.pdf}
+        \caption{test2\_0}
+        \label{fig:test2_0}
+    \end{figure}
+\item test2\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test2_1.pdf}
+        \caption{test2\_1}
+        \label{fig:test2_1}
+    \end{figure}
+\item test2.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test2.pdf}
+        \caption{test2}
+        \label{fig:test2}
+    \end{figure}
+\item test3\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test3_0.pdf}
+        \caption{test3\_0}
+        \label{fig:test3_0}
+    \end{figure}
+\item test3\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test3_1.pdf}
+        \caption{test3\_1}
+        \label{fig:test3_1}
+    \end{figure}
+\item test3\_2.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test3_2.pdf}
+        \caption{test3\_2}
+        \label{fig:test3_2}
+    \end{figure}
+\item test3\_3.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/test3_3.pdf}
+        \caption{test3\_3}
+        \label{fig:test3_3}
+    \end{figure}
+\item test3\_4.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test3_4.pdf}
+        \caption{test3\_4}
+        \label{fig:test3_4}
+    \end{figure}
+\item test4\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test4_0.pdf}
+        \caption{test4\_0}
+        \label{fig:test4_0}
+    \end{figure}
+\item test4\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test4_1.pdf}
+        \caption{test4\_1}
+        \label{fig:test4_1}
+    \end{figure}
+\item test5\_0.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test5_0.pdf}
+        \caption{test5\_0}
+        \label{fig:test5_0}
+    \end{figure}
+\item test5\_1.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/test5_1.pdf}
+        \caption{test5\_1}
+        \label{fig:test5_1}
+    \end{figure}
+\item test\_cmd.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/test_cmd.pdf}
+        \caption{test\_cmd}
+        \label{fig:test_cmd}
+    \end{figure}
+\item test.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/test.pdf}
+        \caption{test}
+        \label{fig:test}
+    \end{figure}
+\item tmp.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/tmp.pdf}
+        \caption{tmp}
+        \label{fig:tmp}
+    \end{figure}
+\item tryme.dot
+    \begin{figure}
+        \centering 
+        \includegraphics{TestPattern/tryme.pdf}
+        \caption{tryme}
+        \label{fig:tryme}
+    \end{figure}
+\item upload.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/upload.pdf}
+        \caption{upload}
+        \label{fig:upload}
+    \end{figure}
+\item val.dot
+    \begin{figure}
+        \centering 
+        \includegraphics*[width=1.0\textwidth,keepaspectratio]{TestPattern/val.pdf}
+        \caption{val}
+        \label{fig:val}
+    \end{figure}
+\item dm-log-replay.py: Python script, purpose not clear.
+\item dict.sh: sed script, purpose not clear.
+\item neatorender.sh: renders dot files in background.
+\item pro-dump.sh: dump data master in production (tsl017.acc).
+\item reenact.sh: eb-write, eb-put; memory dump for all rams.
+\item render.sh
+\item restore\_dump.sh
+\item sleep\_until\_modified.sh
+\item sorted\_render.sh
+\item test.sh
+\item trem.sh
+\item xdotneato.sh
+\item download2.svg
+\end{enumerate}
+
+\end{document}

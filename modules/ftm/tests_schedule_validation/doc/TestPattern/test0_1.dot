@@ -1,0 +1,18 @@
+digraph g {
+name="helloadv";
+
+graph []
+edge  [type="defdst"]
+
+subgraph cpu0 {
+  node  [cpu="0"];
+
+  Evt_A [pos="0,72"]
+  B_A [pos="0,0"]
+  Evt_A -> B_A -> B_A;
+  B_A   -> Evt_A [type="altdst"];
+
+}
+
+
+}
