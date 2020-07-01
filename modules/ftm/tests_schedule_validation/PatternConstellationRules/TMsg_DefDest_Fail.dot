@@ -1,0 +1,7 @@
+digraph G {
+graph [name=TMsg_DefDest_Fail]
+node [pattern="TMsg_DefDest_Fail" toffs=0 tef=0 cpu=0 par=0]
+edge[type="defdst"]
+B[type="block" tperiod=1 patexit="true"];
+Msg1[type="tmsg" fid=1 patentry="true"];
+}
