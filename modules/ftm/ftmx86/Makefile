@@ -44,7 +44,7 @@ T_CXX           = g++
 T_CXXFLAGS      = -g -std=c++11 -fPIC -I$(FTMPATH)/include $(EB_INC) -I$(DIAGPATH) -I$(LZMAPATH) -Wall
 T_CXXFLAGS_CDM  = -DBUILD_DATE=\"$(BUILD_DATE)\" -DTOOL_VER=\"$(VERSION_TOOL)\"  -DEXP_VER=\"$(VERSION_FW)\" -DETHERBONE_THROWS=1 -DBUILDID_OFFS=$(BUILD_ID_ROM_ADR) -DBUILDID_SIZE=$(BUILD_ID_ROM_SIZE)
 T_CC            = gcc
-T_CFLAGS        = -Wall -g -I$(LZMAPATH) -fPIC -Wfatal-errors -D_7ZIP_ST 
+T_CFLAGS        = -Wall -g -I$(LZMAPATH) -fPIC -Wfatal-errors -D_7ZIP_ST
 
 LZMA_SRC_FILES  = LzmaEnc.c LzmaDec.c LzFind.c
 CDM_SRC_FILES   = event.cpp meta.cpp block.cpp visitoruploadcrawler.cpp visitordownloadcrawler.cpp visitorvertexwriter.cpp hashmap.cpp carpeDMimpl.cpp carpeDM.cpp carpeDMcommand.cpp carpeDMuploadschedule.cpp carpeDMdownloadschedule.cpp carpeDMdiagnostics.cpp graph.cpp alloctable.cpp mempool.cpp dotstr.cpp idformat.cpp grouptable.cpp validation.cpp visitorvalidation.cpp common.cpp carpeDMsafe2remove.cpp lzmaCompression.cpp delayDiagnostics.cpp lockmanager.cpp blocklock.cpp ebwrapper.cpp
@@ -52,7 +52,7 @@ CDM_SRC_FILES   = event.cpp meta.cpp block.cpp visitoruploadcrawler.cpp visitord
 T_SOURCES       = $(addprefix $(SRCPATH)/, $(CDM_SRC_FILES)) $(addprefix $(LZMAPATH)/, $(LZMA_SRC_FILES))
 T_OBJECTS       = $(subst .c,.o,$(LZMA_SRC_FILES)) $(subst .cpp,.o,$(CDM_SRC_FILES))
 T_LIBS          = -Wl,-rpath,/usr/local/lib $(EB_LIB) $(GRAPH_LIB) $(SER_LIB)
-EXECS           = dm-sched dm-cmd 
+EXECS           = dm-sched dm-cmd dm-test
 TOOLS           = $(addprefix $(TOOLPATH)/, $(EXECS))
 BINS            = $(addprefix $(BINPATH)/, $(EXECS))
 
@@ -83,12 +83,10 @@ install: $(BINS)
 	cp $(LIBPATH)/libcarpedm.so $(PREFIX)/lib
 
 clean::
-	rm -f $(TOOLPATH)/*.o $(TOOLPATH)/*.a $(TOOLPATH)/*.so $(TOOLPATH)/*.elf $(BINPATH)/dm-sched $(BINPATH)/dm-cmd $(LIBPATH)/libcarpedm.so
+	rm -f $(TOOLPATH)/*.o $(TOOLPATH)/*.a $(TOOLPATH)/*.so $(TOOLPATH)/*.elf $(BINPATH)/dm-sched $(BINPATH)/dm-cmd $(BINPATH)/dm-test $(LIBPATH)/libcarpedm.so
 
 .SECONDEXPANSION:
 $(TOOLS): $$@.cpp libcarpedm.so
 	$(T_CXX) $(T_CXXFLAGS) $(T_CXXFLAGS_CDM) -o $@ $< -L$(LIBPATH) -lcarpedm
 	mkdir -p $(BINPATH)
 	cp $@ $(BINPATH)
-
-

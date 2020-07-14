@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
    }
 
   if (optind+1 >= argc) {
-   std::cerr << std::endl << program << ": expecting one non-optional arguments: <etherbone/simulation-device> <filepath>" << std::endl;
+   std::cerr << std::endl << program << ": expecting two non-optional arguments: <etherbone/simulation-device> <filepath>" << std::endl;
    exit(4);
    }
 
@@ -121,11 +121,11 @@ int main(int argc, char* argv[]) {
   if (dir_err == -1) rem_err = system(cmd.c_str());
   else {std::cout << "Created directory" << dirname << std::endl;}
 
-  if (rem_err == 0) std::cout << "Cleared directory" << dirname << std::endl;
+  if (rem_err == 0) std::cout << "Cleared directory " << dirname << std::endl;
 
   if (dir_err == -1 && rem_err != 0)
   {
-    std::cerr << "Error creating/clearing directory" << dirname << std::endl;
+    std::cerr << "Error creating/clearing directory " << dirname << std::endl;
     exit(1);
   }
 
