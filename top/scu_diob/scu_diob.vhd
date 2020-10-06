@@ -14,7 +14,6 @@ use work.monster_pkg.all;
 
 --use work.daq_pkg.all;
 
-
 --  Base_addr    : DIOB-Config-Register1 (alle Bit können gelesen und geschrieben werden)
 --  +------------+---------------------------+------------------------------------------------------------------------------------------------------------------
 --  | Bit 15     | Test-Mode                 | 1 = Testmodus; für Inbetriebnahme und Diagnose, 0 = Normalbetrieb (default)
@@ -229,8 +228,6 @@ architecture scu_diob_arch of scu_diob is
     CONSTANT c_IOBP_ID_Base_Addr:                Integer := 16#0638#;  -- IO-Backplane Modul-ID-Register
     CONSTANT c_HW_Interlock_Base_Addr:           Integer := 16#0640#;  -- IO-Backplane Spill Abort HW Interlock
     CONSTANT c_IOBP_QD_Base_Addr:                Integer := 16#0650#;  -- IO-Backplane Quench Detection
-    CONSTANT c_IOBP_LWL_Base_Addr:                Integer := 16#0658#;  -- IO-Backplane Detection --to be checked and corrected
-
 
 
 
@@ -1525,7 +1522,6 @@ END COMPONENT hw_interlock;
 
   TYPE   t_input_array      is array (1 to 12) of std_logic_vector(5 downto 1);
   signal IOBP_Input:        t_input_array;    -- Inputs der "Slave-Karten"
- 
 
   TYPE   t_id_array         is array (1 to 12) of std_logic_vector(7 downto 0);
   signal IOBP_ID:           t_id_array;     -- ID's der "Slave-Karten"
@@ -2270,7 +2266,7 @@ port map  (
       Data_to_SCUB       =>  IOBP_msk_data_to_SCUB
     );
 
-IOBP_ID_Reg: in_reg                                                                                                                  
+IOBP_ID_Reg: in_reg
 generic map(
       Base_addr =>  c_IOBP_ID_Base_Addr
       )
@@ -2285,14 +2281,14 @@ port map  (
       clk                =>  clk_sys,
       nReset             =>  rstn_sys,
 --
-      Reg_In1            =>  IOBP_Id_Reg1,                                                      
-      Reg_In2            =>  IOBP_Id_Reg2,
-      Reg_In3            =>  IOBP_Id_Reg3,                                    
-      Reg_In4            =>  IOBP_Id_Reg4,
-      Reg_In5            =>  IOBP_Id_Reg5,
-      Reg_In6            =>  IOBP_Id_Reg6,
-      Reg_In7            =>  IOBP_Id_Reg7,
-      Reg_In8            =>  IOBP_Id_Reg8,
+      Reg_In1            =>  IOBP_ID_Reg1,
+      Reg_In2            =>  IOBP_ID_Reg2,
+      Reg_In3            =>  IOBP_ID_Reg3,
+      Reg_In4            =>  IOBP_ID_Reg4,
+      Reg_In5            =>  IOBP_ID_Reg5,
+      Reg_In6            =>  IOBP_ID_Reg6,
+      Reg_In7            =>  IOBP_ID_Reg7,
+      Reg_In8            =>  IOBP_ID_Reg8,
 --
       Reg_rd_active      =>  IOBP_id_rd_active,
       Dtack_to_SCUB      =>  IOBP_id_Dtack,
@@ -5045,7 +5041,6 @@ BEGIN
       PIO_ENA(89)         <=  '1';                  -- Output Enable
       P25IO_Reset_deb_i   <=  not PIO_Sync(67);     -- input "Rest-Taster" L-Aktiv
 
-                       
    --###################### Input's ==> FF ########################
 
       IF  (Diob_Config1(11) = '0')  THEN            -- 0 = Entprellung "Eingeschaltet"
@@ -5147,7 +5142,8 @@ BEGIN
 
         when "00"  =>  -- DAC16-Mode
 
-              P25IO_DAC_Data_FG_Out(15 DOWNTO 0) <=  AW_Output_Reg(2)(15 DOWNTO 0); ------------------------- Bipolar              
+              P25IO_DAC_Data_FG_Out(15 DOWNTO 0) <=  AW_Output_Reg(2)(15 DOWNTO 0); ------------------------- Bipolar
+
               P25IO_DAC_DAC_Strobe_Expo  <=  (to_integer(unsigned(AW_Config1)(5 downto 3)));  -- Multiplikationswert für 100ns aus Wertetabelle 2^n
 
               P25IO_Holec_Strobe_Start   <=  (AWOut_Reg2_wr AND Ext_Wr_fin_ovl);              -- Software-Strobe
@@ -5164,7 +5160,7 @@ BEGIN
 
         when "01"  =>  -- Output-Mode(Default):
 
-              P25IO_DAC_Data_FG_Out(15 DOWNTO 0) <=  AW_Output_Reg(2)(15 DOWNTO 0); 
+              P25IO_DAC_Data_FG_Out(15 DOWNTO 0) <=  AW_Output_Reg(2)(15 DOWNTO 0);
               P25IO_DAC_Strobe                   <=  NOT AW_Output_Reg(1)(0);
 
 
@@ -5358,7 +5354,12 @@ BEGIN
    P25IO_ECC_Strobe_i         <=  P25IO_ECC_Puls_o;
 
    PIO_OUT(101)  <=  not P25IO_ECC_Strobe_o;   -- ECC (Enable-Convert-CMD)
-   PIO_ENA(101)  <=  '1';                      -- Output Ena
+   PIO_ENA(101)  <=  '1';                      -- Output Enable
+
+
+
+    --#################################################################################
+    --#################################################################################
 
 
 
@@ -6580,7 +6581,7 @@ BEGIN
     Max_AWIn_Reg_Nr      <= 1;  -- Maximale AWIn-Reg-Nummer der Anwendung
     Min_AWIn_Deb_Time    <= 1;  -- Minimale Debounce-Zeit 2 Hoch "Min_AWIn_Deb_Time" in us
 
-    
+
     --############################# Set Debounce-Time ######################################
 
     AWIn_Deb_Time   <= to_integer(unsigned(Diob_Config1)(14 downto 12)); -- -- Debounce-Zeit 2 Hoch "AWIn_Deb_Time" in us, Wert aus DIOB-Config 1
@@ -6793,6 +6794,9 @@ BEGIN
     --###################################################################################
 
 
+    extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
+    extension_cid_group  <= c_AW_INLB12S.CID;   -- extension card: cid_group, "FG902_050"
+
     extension_cid_group  <= c_AW_INLB12S.CID; -- extension card: cid_group, "FG902_050"
   
     extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
@@ -6803,7 +6807,6 @@ BEGIN
     Max_AWOut_Reg_Nr     <= 3;  -- Maximale AWOut-Reg-Nummer der Anwendung
     Max_AWIn_Reg_Nr      <= 1;  -- Maximale AWIn-Reg-Nummer der Anwendung
     Min_AWIn_Deb_Time    <= 0;  -- Minimale Debounce-Zeit 2 Hoch "Min_AWIn_Deb_Time" in us
-    
 
     --############################# Set Debounce- oder Syn-Time ######################################
 
@@ -6997,7 +7000,6 @@ BEGIN
 
 --################################ Outputs AND Maske ##################################
 --
-
     case AW_Config2 is
 
     when x"ABDE" => --SPILL ABORT Development
@@ -7034,7 +7036,6 @@ BEGIN
       spill_req <=  Deb60_in(7) & Deb60_in(2) & Deb60_in(5) & Deb60_in(0);
       spill_pause <= "00" & Deb60_in(6) & Deb60_in(1);
       IOBP_Output <= "0000" & TS_Abort & "000" & KO_abort & RF_abort  & FQ_rst & FQ_abort;
-     
 
       UIO_Out(0)    <= spill_abort_HWI_out(0);
       UIO_Out(1)    <= spill_abort_HWI_out(1);
@@ -8153,18 +8154,10 @@ WHEN   c_AW_16Out2.ID  =>
    (PIO_ENA(17), PIO_ENA(19), PIO_ENA(21), PIO_ENA(23),
     PIO_ENA(25), PIO_ENA(27), PIO_ENA(29), PIO_ENA(31) )  <=  std_logic_vector'("11111111"); -- Output Enable
 
-
-
-
-
-
   END CASE;
-
 
   END IF;
 
-
 END PROCESS p_AW_MUX;
 
-   
 end architecture;
