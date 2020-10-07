@@ -270,11 +270,11 @@ architecture scu_diob_arch of scu_diob is
 ---
 --- Konstantenwerte für die Interface-Module für der aktuellen und neuen Zwischenbackplane:
 ---
-    CONSTANT c_BP_5LWLIO2 :    ID_CID:= (x"01", 65);   ---- Piggy-ID(Codierung), B"0000_0001", FG902.011 -- 5x opt In, 1x opt Out       -> aktuelle Zwischenbackplane
-    CONSTANT c_BP_5LEMOIO2 :   ID_CID:= (x"02", 66);  ---- Piggy-ID(Codierung), B"0000_0010", FG902.011 -- 5xlemo In, 1xlemo Out      -> aktuelle Zwischenbackplane
-    CONSTANT c_BP_6LemoI1 :    ID_CID:= (x"03", 74);   ---- Piggy-ID(Codierung), B"0000_0011", FG902.xxx -- 6xlemo In, ipotetical value -> neue Zwischenbackplane
-    CONSTANT c_BP_6LWLI1 :     ID_CID:= (x"04", 75);    ---- Piggy-ID(Codierung), B"0000_0100", FG902.xxx -- 6x opt In, ipotetical value  -> neue Zwischenbackplane
-    CONSTANT c_BP_6LWLO1 :     ID_CID:= (x"05", 76);    ---- Piggy-ID(Codierung), B"0000_0101", FG902.xx -- 6x opt Out, ipotetical value  -> neue Zwischenbackplane
+    CONSTANT c_BP_5LWLIO2 :    ID_CID:= (x"01", 65);   ----SUB- Piggy-ID(Codierung), B"0000_0001", FG902.011 -- 5x opt In, 1x opt Out       -> aktuelle Zwischenbackplane
+    CONSTANT c_BP_5LEMOIO2 :   ID_CID:= (x"02", 66);  ---- SUB-Piggy-ID(Codierung), B"0000_0010", FG902.011 -- 5xlemo In, 1xlemo Out      -> aktuelle Zwischenbackplane
+    CONSTANT c_BP_6LemoI1 :    ID_CID:= (x"03", 74);   ---- SUB-Piggy-ID(Codierung), B"0000_0011", FG902.xxx -- 6xlemo In, ipotetical value -> neue Zwischenbackplane
+    CONSTANT c_BP_6LWLI1 :     ID_CID:= (x"04", 75);    ---- SUB-Piggy-ID(Codierung), B"0000_0100", FG902.xxx -- 6x opt In, ipotetical value  -> neue Zwischenbackplane
+    CONSTANT c_BP_6LWLO1 :     ID_CID:= (x"05", 76);    ---- SUB-Piggy-ID(Codierung), B"0000_0101", FG902.xx -- 6x opt Out, ipotetical value  -> neue Zwischenbackplane
     
     --  CONSTANT c_AW:            ID_CID:= (x"0F", 00);   ---- Piggy-ID(Codierung), B"0000_1111",
 
@@ -4107,7 +4107,7 @@ PORT MAP
 
    
    -- ID-Input-Registes for the identification of the trigger matrix configuration 
-   IOBP_ID_Cod_process: process(clk_sys,rstn_sys)
+   IOBP_ID_Cod_process: process(clk_sys,rstn_sys,IOBP_ID)
    begin
     if rstn_sys ='0' then 
        for i in 1 to 12 loop
@@ -6796,10 +6796,6 @@ BEGIN
 
     extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
     extension_cid_group  <= c_AW_INLB12S.CID;   -- extension card: cid_group, "FG902_050"
-
-    extension_cid_group  <= c_AW_INLB12S.CID; -- extension card: cid_group, "FG902_050"
-  
-    extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
   
     AW_Status1(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
 	  AW_Status2(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
@@ -6967,7 +6963,9 @@ BEGIN
     END IF;
 
 
---  ################################ Input's AND Maske zu Input-Register ##################################
+--  ################################ Input's AND Maske zu Input-Register ####################    extension_cid_group  <= c_AW_INLB12S.CID; -- extension card: cid_group, "FG902_050"
+  
+    extension_cid_system <= c_cid_system;       -- extension card: CSCOHW##############
 
 --                  Input-Test, Stecker 1, 2, 3
 
@@ -7104,9 +7102,9 @@ extension_cid_group  <= c_AW_INLB12S1.CID; -- extension card: cid_group, new Zwi
 extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
 
 AW_Status1(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
-  AW_Status2(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
+AW_Status2(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
 
-Max_AWOut_Reg_Nr     <= 5;  -- Maximale AWOut-Reg-Nummer der Anwendung
+Max_AWOut_Reg_Nr     <= 2;  -- Maximale AWOut-Reg-Nummer der Anwendung
 Max_AWIn_Reg_Nr      <= 5;  -- Maximale AWIn-Reg-Nummer der Anwendung
 Min_AWIn_Deb_Time    <= 0;  -- Minimale Debounce-Zeit 2 Hoch "Min_AWIn_Deb_Time" in us
 mx_id_ena <='1';
@@ -7503,9 +7501,9 @@ IOBP_Aktiv_LED_i(12) <=  IOBP_SK_Output(3);                                     
 When others => NULL;
 
 end case;
---  
---        ---------------------------------------------------
---
+  
+        ---------------------------------------------------
+
 
 WHEN   c_AW_16Out2.ID  =>
     --###################################################################################

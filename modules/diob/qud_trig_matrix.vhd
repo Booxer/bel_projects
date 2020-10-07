@@ -67,12 +67,13 @@ architecture qud_trig_matrix_arch of qud_trig_matrix is
 
 type   t_reg_array         is array (1 to 12) of std_logic_vector(7 downto 0);
 signal conf_reg:           t_reg_array; 
-signal 	Matrix_conf: std_logic_vector(35 downto 0);
 signal  IN_LEMO_prot_cnt: integer range 0 to 12; 
 signal  IN_OPT_prot_cnt: integer range 0 to 12; 
 signal  IN_LEMO_cnt: integer range 0 to 12; 
 signal  IN_OPT_I_cnt: integer range 0 to 12; 
 signal  IN_OPT_o_cnt: integer range 0 to 12; 
+type   IOBP_slot_check_state_t is   (IOBP_slot_check_idle, IOBP_slot1, IOBP_slot2,IOBP_slot3,IOBP_slot4,IOBP_slot5,IOBP_slot6,IOBP_slot7,IOBP_slot8,IOBP_slot9,IOBP_slot10,IOBP_slot11,IOBP_slot12,IOBP_slot_check_end);
+signal IOBP_slot_check_state:   IOBP_slot_check_state_t:= IOBP_slot_check_idle;
 
 begin
 	
@@ -86,67 +87,297 @@ begin
 		IN_LEMO_cnt <=0;
 		IN_OPT_I_cnt <=0;
         IN_OPT_O_cnt <=0;
-        
-        Matrix_conf <=(others => '0'); -- 
+
         for i in 1 to 12 loop
             conf_reg(i)<= (others => '0' );
         end loop; 
+
+        IOBP_slot_check_state <= IOBP_slot_check_idle;
+
     elsif (clk'EVENT AND clk = '1') then
-		if read_ID_ena ='1' then 
+        if read_ID_ena ='1' then 
 
-				conf_reg(1)<= slave1_ID;
-            	conf_reg(2)<= slave2_ID;
-           	 	conf_reg(3)<= slave3_ID;
-            	conf_reg(4)<= slave4_ID;
-            	conf_reg(5)<= slave5_ID;
-                conf_reg(6)<= slave6_ID;
-            	conf_reg(7)<= slave7_ID;
-           	 	conf_reg(8)<= slave8_ID;
-            	conf_reg(9)<= slave9_ID;
-                conf_reg(10)<= slave10_ID;
-                conf_reg(11)<= slave11_ID;
-            	conf_reg(12)<= slave12_ID;
+        case IOBP_slot_check_state is
+            when IOBP_slot_check_idle	=>  IN_LEMO_cnt <=0;
+                                            IN_OPT_I_cnt <=0;
+                                            IN_OPT_O_cnt <=0;
+    
+                                            IOBP_slot_check_state <= IOBP_slot1;
 
-                for i in 1 to 12 loop
-                    case conf_reg(i) is
-                        when "01000001" => 
-                                           IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+            when IOBP_slot1=>			    conf_reg(1)<= slave1_ID;
+                                            case conf_reg(1) is
+                                                when "01000001" => 
+                                                                    IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot2;
 
-                        when "01000010" => 
-                                           IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+            when IOBP_slot2=>			    conf_reg(2)<= slave2_ID;
+                                            case conf_reg(2) is
+                                                when "01000001" => 
+                                                                   IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot3;
 
-                        when "01001010" => 
-                                           IN_LEMO_cnt <= IN_LEMO_cnt +1;
+            when IOBP_slot3=>			    conf_reg(3)<= slave3_ID;
+                                            case conf_reg(3) is
+                                                when "01000001" => 
+                                                IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                                                IN_LEMO_cnt <=0;
+                                                IN_OPT_I_cnt <=0;
+                                                IN_OPT_O_cnt <=0;
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                                                                   
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot4;
 
-                        when "01001011" => 
-                                           IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+             when IOBP_slot4=>			    conf_reg(4)<= slave4_ID;
+                                            case conf_reg(4) is
+                                                when "01000001" => 
+                                                                   IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot5;
 
-                        when "01001100" => 	
-                                           IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+            when IOBP_slot5=>			    conf_reg(5)<= slave5_ID;
+                                            case conf_reg(5) is
+                                                when "01000001" => 
+                                                                   IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot6;
 
-                        when others     =>  NULL;
-                    end case;
-                end loop;
+            when IOBP_slot6=>			    conf_reg(6)<= slave6_ID;
+                                            case conf_reg(6) is
+                                                when "01000001" => 
+                                                                    IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot7;
 
+            when IOBP_slot7=>			    conf_reg(7)<= slave7_ID;
+                                            case conf_reg(7) is
+                                                when "01000001" => 
+                                                                  IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot8;
+
+            when IOBP_slot8=>			    conf_reg(8)<= slave8_ID;
+                                            case conf_reg(8) is
+                                                when "01000001" => 
+                                                                 IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot9;
+
+            when IOBP_slot9=>			    conf_reg(9)<= slave9_ID;
+                                            case conf_reg(9) is
+                                                when "01000001" => 
+                                                                   IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot10;
+
+            when IOBP_slot10=>			    conf_reg(10)<= slave10_ID;
+                                            case conf_reg(10) is
+                                                when "01000001" => 
+                                                                 IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot11;
+
+            when IOBP_slot11=>			    conf_reg(11)<= slave11_ID;
+                                            case conf_reg(11) is
+                                                when "01000001" => 
+                                                                   IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot12;
+
+            when IOBP_slot12=>			    conf_reg(12)<= slave12_ID;
+                                            case conf_reg(12) is
+                                                when "01000001" => 
+                                                                  IN_OPT_prot_cnt <= IN_OPT_prot_cnt +1;
+                        
+                                                when "01000010" => 
+                                                                   IN_LEMO_prot_cnt <= IN_LEMO_prot_cnt +1;
+                        
+                                                when "01001010" => 
+                                                                   IN_LEMO_cnt <= IN_LEMO_cnt +1;
+                        
+                                                when "01001011" => 
+                                                                   IN_OPT_I_cnt <= IN_OPT_I_cnt +1;
+                        
+                                                when "01001100" => 	
+                                                                   IN_OPT_O_cnt <= IN_OPT_O_cnt +1;
+                        
+                                                when others     =>  NULL;
+                                            end case;
+                                            IOBP_slot_check_state <= IOBP_slot_check_end;
+            
+                when IOBP_slot_check_end => if IN_LEMO_prot_cnt = 3 and IN_OPT_prot_cnt =2 then 
 			
-                if IN_LEMO_prot_cnt = 3 and IN_OPT_prot_cnt =2 then 
-			
-					Trigger_matrix_Config <= "00000001";
-				else
-                    if IN_LEMO_cnt=9 and IN_opt_O_cnt = 3 then
-                        Trigger_matrix_Config <= "00000010"; --standard Matrix
-                    else 
-                        if IN_LEMO_cnt=0 and IN_opt_I_cnt = 9 and IN_opt_O_cnt =1 then 
-                            Trigger_matrix_Config  <= "00000011";--optical Matrix
-                        else
-                            if IN_LEMO_cnt=7 and IN_opt_I_cnt = 2 and IN_opt_O_cnt =3 then
-                                Trigger_matrix_Config  <= "00000100";--mixed input Matrix
-                            else
-                                Trigger_matrix_Config <= "00000000"; --
-                            end if;
-                        end if;
-                    end if;
-                end if;
+					                            Trigger_matrix_Config <= "00000001";
+				                            else
+                                                if IN_LEMO_cnt=9 and IN_opt_O_cnt = 3 then
+                                                    Trigger_matrix_Config <= "00000010"; --standard Matrix
+                                                else 
+                                                    if IN_LEMO_cnt=0 and IN_opt_I_cnt = 9 and IN_opt_O_cnt =1 then 
+                                                        Trigger_matrix_Config  <= "00000011";--optical Matrix
+                                                    else
+                                                        if IN_LEMO_cnt=7 and IN_opt_I_cnt = 2 and IN_opt_O_cnt =3 then
+                                                            Trigger_matrix_Config  <= "00000100";--mixed input Matrix
+                                                        else
+                                                            Trigger_matrix_Config <= "00000000"; --
+                                                        end if;
+                                                    end if;
+                                                end if;
+                                            end if;
+
+                                            IOBP_slot_check_state <= IOBP_slot_check_idle;
+
+                 when others =>           IOBP_slot_check_state <= IOBP_slot_check_idle;
+        end case;
 		end if;
 	end if;
     end process Matrix_configuration_proc; 
