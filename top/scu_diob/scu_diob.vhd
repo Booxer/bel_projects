@@ -3994,6 +3994,29 @@ P_IOBP_LED_ID_Loop:  process (clk_sys, Ena_Every_250ns, rstn_sys, IOBP_state)
     end if;
   end process P_IOBP_LED_ID_Loop;
 
+   -- ID-Input-Registes for the identification of the trigger matrix configuration 
+   IOBP_ID_Cod_process: process(clk_sys,rstn_sys,Ena_Every_250ns, IOBP_ID)
+
+   
+   begin
+    if rstn_sys ='0' then 
+       for i in 1 to 12 loop
+        IOBP_IDcod(i)<= (others => '0');
+        mx_id_ena <='0';
+       end loop;
+       ELSIF (clk_sys'EVENT AND clk_sys = '1' AND Ena_Every_250ns = '1') THEN
+       if  ((AW_ID(7 downto 0) = c_AW_INLB12S.ID) or (AW_ID(7 downto 0) = c_AW_INLB12S1.ID)) THEN 
+          mx_id_ena<='1';
+          for i in 1 to 12 loop 
+            if (IOBP_ID(i) = c_BP_5LWLIO2.ID or IOBP_ID(i)= c_BP_5LEMOIO2.ID or IOBP_ID(i) = c_BP_6LemoI1.ID or IOBP_ID(i) = c_BP_6LWLO1.ID) then    
+              IOBP_IDcod(i) <= IOBP_ID(i);
+            end if;
+          end loop;
+        end if;
+    
+    end if;
+   end process;
+ 
   Spill_Abort_Station_Gen:  for J in 0 to 3 generate
   spill_userstations : spill_abort
     Port map( clk => clk_sys,
@@ -4106,20 +4129,6 @@ PORT MAP
   
 
    
-   -- ID-Input-Registes for the identification of the trigger matrix configuration 
-   IOBP_ID_Cod_process: process(clk_sys,rstn_sys,IOBP_ID)
-   begin
-    if rstn_sys ='0' then 
-       for i in 1 to 12 loop
-        IOBP_IDcod(i)<= (others => '0');
-       end loop;
-     ELSIF rising_edge(clk_sys) THEN
-       for i in 1 to 12 loop 
-         IOBP_IDcod(i) <= IOBP_ID(i);
-       end loop;
-     end if;
-   end process;
- 
 
 --  +============================================================================================================================+
 --  |                                          Anwender-IO: Out16  -- FG901_010                                                  |
@@ -7107,7 +7116,6 @@ AW_Status2(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
 Max_AWOut_Reg_Nr     <= 2;  -- Maximale AWOut-Reg-Nummer der Anwendung
 Max_AWIn_Reg_Nr      <= 5;  -- Maximale AWIn-Reg-Nummer der Anwendung
 Min_AWIn_Deb_Time    <= 0;  -- Minimale Debounce-Zeit 2 Hoch "Min_AWIn_Deb_Time" in us
-mx_id_ena <='1';
   
 --############################# Set Debounce- oder Syn-Time ######################################
 
