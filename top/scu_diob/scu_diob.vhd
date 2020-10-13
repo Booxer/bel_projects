@@ -4005,7 +4005,7 @@ P_IOBP_LED_ID_Loop:  process (clk_sys, Ena_Every_250ns, rstn_sys, IOBP_state)
         mx_id_ena <='0';
        end loop;
        ELSIF (clk_sys'EVENT AND clk_sys = '1' AND Ena_Every_250ns = '1') THEN
-       if  ((AW_ID(7 downto 0) = c_AW_INLB12S.ID) or (AW_ID(7 downto 0) = c_AW_INLB12S1.ID)) THEN 
+       if  (AW_ID(7 downto 0) = c_AW_INLB12S1.ID) THEN 
           mx_id_ena<='1';
           for i in 1 to 12 loop 
             if (IOBP_ID(i) = c_BP_5LWLIO2.ID or IOBP_ID(i)= c_BP_5LEMOIO2.ID or IOBP_ID(i) = c_BP_6LemoI1.ID or IOBP_ID(i) = c_BP_6LWLO1.ID) then    
