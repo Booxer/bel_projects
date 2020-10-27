@@ -388,7 +388,16 @@ begin
                                                         if IN_LEMO_cnt=7 and IN_opt_I_cnt = 2 and IN_opt_O_cnt =3 then
                                                             Trigger_matrix_Config  <= "00000100";--mixed input Matrix
                                                         else
-                                                            Trigger_matrix_Config <= "00000000"; --
+                                                            if (IN_LEMO_cnt /=0) or (IN_OPT_I_cnt /=0) or (IN_opt_O_cnt /=0) then 
+                                                                Trigger_matrix_Config  <= "00000101";-- other new configuration Matrix
+                                                            else 
+                                                                if (IN_LEMO_prot_cnt /=0) or (IN_OPT_prot_cnt /=0)  then 
+                                                                    Trigger_matrix_Config  <= "00000110";-- other proto configuration Matrix
+                                                                else 
+                                                                    Trigger_matrix_Config <= "00000000"; --no cards in the slots
+                                                                end if; 
+                                                            end if;
+                                                         
                                                         end if;
                                                     end if;
                                                 end if;

@@ -270,11 +270,11 @@ architecture scu_diob_arch of scu_diob is
 ---
 --- Konstantenwerte für die Interface-Module für der aktuellen und neuen Zwischenbackplane:
 ---
-    CONSTANT c_BP_5LWLIO2 :    ID_CID:= (x"01", 65);   ----SUB- Piggy-ID(Codierung), B"0000_0001", FG902.011 -- 5x opt In, 1x opt Out       -> aktuelle Zwischenbackplane
-    CONSTANT c_BP_5LEMOIO2 :   ID_CID:= (x"02", 66);  ---- SUB-Piggy-ID(Codierung), B"0000_0010", FG902.011 -- 5xlemo In, 1xlemo Out      -> aktuelle Zwischenbackplane
-    CONSTANT c_BP_6LemoI1 :    ID_CID:= (x"03", 74);   ---- SUB-Piggy-ID(Codierung), B"0000_0011", FG902.xxx -- 6xlemo In, ipotetical value -> neue Zwischenbackplane
-    CONSTANT c_BP_6LWLI1 :     ID_CID:= (x"04", 75);    ---- SUB-Piggy-ID(Codierung), B"0000_0100", FG902.xxx -- 6x opt In, ipotetical value  -> neue Zwischenbackplane
-    CONSTANT c_BP_6LWLO1 :     ID_CID:= (x"05", 76);    ---- SUB-Piggy-ID(Codierung), B"0000_0101", FG902.xx -- 6x opt Out, ipotetical value  -> neue Zwischenbackplane
+    CONSTANT c_BP_5LWLIO2 :    ID_CID:= (x"01", 65);   ----SUB- Piggy-ID(Codierung), B"0000_0001", FG902.011 -- 5x opt In, 1x opt Out       -> aktuelle und newe Zwischenbackplane
+    CONSTANT c_BP_5LEMOIO2 :   ID_CID:= (x"02", 66);   ---- SUB-Piggy-ID(Codierung), B"0000_0010", FG902.011 -- 5xlemo In, 1xlemo Out       -> aktuelle und newe Zwischenbackplane
+    CONSTANT c_BP_6LemoI1 :    ID_CID:= (x"03", 74);   ---- SUB-Piggy-ID(Codierung), B"0000_0011", FG902.xxx -- 6xlemo In, ipotetical value              -> neue Zwischenbackplane
+    CONSTANT c_BP_6LWLI1 :     ID_CID:= (x"04", 75);   ---- SUB-Piggy-ID(Codierung), B"0000_0100", FG902.xxx -- 6x opt In, ipotetical value              -> neue Zwischenbackplane
+    CONSTANT c_BP_6LWLO1 :     ID_CID:= (x"05", 76);   ---- SUB-Piggy-ID(Codierung), B"0000_0101", FG902.xx -- 6x opt Out, ipotetical value              -> neue Zwischenbackplane
     
     --  CONSTANT c_AW:            ID_CID:= (x"0F", 00);   ---- Piggy-ID(Codierung), B"0000_1111",
 
@@ -3994,28 +3994,6 @@ P_IOBP_LED_ID_Loop:  process (clk_sys, Ena_Every_250ns, rstn_sys, IOBP_state)
     end if;
   end process P_IOBP_LED_ID_Loop;
 
-   -- ID-Input-Registes for the identification of the trigger matrix configuration 
-   IOBP_ID_Cod_process: process(clk_sys,rstn_sys,Ena_Every_250ns, IOBP_ID)
-
-   
-   begin
-    if rstn_sys ='0' then 
-       for i in 1 to 12 loop
-        IOBP_IDcod(i)<= (others => '0');
-        mx_id_ena <='0';
-       end loop;
-       ELSIF (clk_sys'EVENT AND clk_sys = '1' AND Ena_Every_250ns = '1') THEN
-       if  (AW_ID(7 downto 0) = c_AW_INLB12S1.ID) THEN 
-          mx_id_ena<='1';
-          for i in 1 to 12 loop 
-            if (IOBP_ID(i) = c_BP_5LWLIO2.ID or IOBP_ID(i)= c_BP_5LEMOIO2.ID or IOBP_ID(i) = c_BP_6LemoI1.ID or IOBP_ID(i) = c_BP_6LWLO1.ID) then    
-              IOBP_IDcod(i) <= IOBP_ID(i);
-            end if;
-          end loop;
-        end if;
-    
-    end if;
-   end process;
  
   Spill_Abort_Station_Gen:  for J in 0 to 3 generate
   spill_userstations : spill_abort
@@ -4112,18 +4090,18 @@ PORT MAP
   clk => clk_sys,
   nReset => rstn_sys,
   read_ID_ena => mx_id_ena,
-  slave1_ID => IOBP_IDcod(1),
-  slave2_ID => IOBP_IDcod(2),
-  slave3_ID => IOBP_IDcod(3),
-  slave4_ID => IOBP_IDcod(4),
-  slave5_ID => IOBP_IDcod(5),
-  slave6_ID => IOBP_IDcod(6),
-  slave7_ID => IOBP_IDcod(7),
-  slave8_ID => IOBP_IDcod(8),
-  slave9_ID => IOBP_IDcod(9),
-  slave10_ID => IOBP_IDcod(10),
-  slave11_ID => IOBP_IDcod(11),
-  slave12_ID => IOBP_IDcod(12),
+  slave1_ID => IOBP_ID(1), --IOBP_IDcod(1),
+  slave2_ID => IOBP_ID(2), --IOBP_IDcod(2),
+  slave3_ID => IOBP_ID(3), --IOBP_IDcod(3),
+  slave4_ID => IOBP_ID(4), --IOBP_IDcod(4),
+  slave5_ID => IOBP_ID(5), --IOBP_IDcod(5),
+  slave6_ID => IOBP_ID(6), --IOBP_IDcod(6),
+  slave7_ID => IOBP_ID(7), --IOBP_IDcod(7),
+  slave8_ID => IOBP_ID(8), --IOBP_IDcod(8),
+  slave9_ID => IOBP_ID(9), --IOBP_IDcod(9),
+  slave10_ID => IOBP_ID(10), --IOBP_IDcod(10),
+  slave11_ID => IOBP_ID(11), --IOBP_IDcod(11),
+  slave12_ID => IOBP_ID(12), --IOBP_IDcod(12),
   Trigger_matrix_Config => qud_mtx
   );
   
@@ -4449,7 +4427,8 @@ p_AW_MUX: PROCESS (clk_sys, rstn_sys, Powerup_Done, AW_ID, s_nLED_Out, signal_ta
             AD1_Trigger_Mode, AD1_sw_Trigger, AD1_ext_Trigger, AD1_nCS, AD1_Reset, AD1_ByteSwap, AD1_nCNVST, AD1_Busy, AD1_Out, AD1_ext_Trigger_nLED,
             AD2_Trigger_Mode, AD2_sw_Trigger, AD2_ext_Trigger, AD2_nCS, AD2_Reset, AD2_ByteSwap, AD2_nCNVST, AD2_Busy, AD2_Out, AD2_ext_Trigger_nLED,
             In8Out8_In, In8Out8_Input, In8Out8_Deb_out, In8Out8_nLED_Lemo_In_o, In8Out8_Out, In8Out8_nLED_Lemo_Out_o,
-             IOBP_SK_Output, IOBP_SK_Input, qud_mtx,  mx_id_ena, IOBP_IDcod
+            -- IOBP_SK_Output, IOBP_SK_Input, qud_mtx,  mx_id_ena, IOBP_IDcod
+            IOBP_SK_Output, IOBP_SK_Input, qud_mtx,  mx_id_ena
             )
 
 
@@ -7202,7 +7181,7 @@ END IF;
 
 case qud_mtx is
 
-when "00000001" => 
+when "00000001" | "00000110" => 
 
 (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
  PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
@@ -7371,8 +7350,9 @@ IOBP_Aktiv_LED_i(11) <=  (IOBP_Output(11)   &  Deb60_out(54 DOWNTO 50));  -- Sig
 IOBP_Aktiv_LED_i(12) <=  (IOBP_Output(12)   &  Deb60_out(59 DOWNTO 55));  -- Signale für Aktiv-LED's
 
 --------------------------------------------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------------------------------------------
-when "00000010" | "00000100" | "00000011"   => 
+--else          --------------------------------------------------------------------------------------------------------------------------------------------------
+
+when "00000010" | "00000100" | "00000011" |"00000101"  => 
 
 -- STANDARD MATRIX 										
 -- 9 x [6 electrical inputs] 
@@ -7506,9 +7486,128 @@ IOBP_Aktiv_LED_i(12) <=  IOBP_SK_Output(3);                                     
 
 
 
-When others => NULL;
-
+When others =>  --for i in 1 to 12 loop 
+  --if (IOBP_ID(i) = c_BP_5LWLIO2.ID or IOBP_ID(i)= c_BP_5LEMOIO2.ID or IOBP_ID(i)="00000000" or IOBP_ID(i)="11111111") then 
+  (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
+  PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
+ 
+ (PIO_ENA(112), PIO_ENA(48), PIO_ENA(130), PIO_ENA(30), PIO_ENA(137), PIO_ENA(35),
+  PIO_ENA(119), PIO_ENA(53), PIO_ENA(101), PIO_ENA(73), PIO_ENA(96),  PIO_ENA(56))   <= std_logic_vector'("111111111111");   -- Output Enable
+ 
+ 
+ IOBP_Input(1)(5 downto 1)  <= ( PIO_SYNC(62),  PIO_SYNC(54),  PIO_SYNC(60),  PIO_SYNC(52),  PIO_SYNC(58)  );  -- Input's 5-1 von den der Slave-Karte-1,
+ IOBP_Input(2)(5 downto 1)  <= ( PIO_SYNC(102), PIO_SYNC(94),  PIO_SYNC(100), PIO_SYNC(92),  PIO_SYNC(98)  );  -- Input's 5-1 von den der Slave-Karte-2,
+ IOBP_Input(3)(5 downto 1)  <= ( PIO_SYNC(79),  PIO_SYNC(71),  PIO_SYNC(77),  PIO_SYNC(69),  PIO_SYNC(75)  );  -- Input's 5-1 von den der Slave-Karte-3,
+ IOBP_Input(4)(5 downto 1)  <= ( PIO_SYNC(93),  PIO_SYNC(103), PIO_SYNC(91),  PIO_SYNC(105), PIO_SYNC(89)  );  -- Input's 5-1 von den der Slave-Karte-4,
+ IOBP_Input(5)(5 downto 1)  <= ( PIO_SYNC(63),  PIO_SYNC(55),  PIO_SYNC(61),  PIO_SYNC(57),  PIO_SYNC(59)  );  -- Input's 5-1 von den der Slave-Karte-5,
+ IOBP_Input(6)(5 downto 1)  <= ( PIO_SYNC(111), PIO_SYNC(121), PIO_SYNC(109), PIO_SYNC(123), PIO_SYNC(107) );  -- Input's 5-1 von den der Slave-Karte-6,
+ IOBP_Input(7)(5 downto 1)  <= ( PIO_SYNC(45),  PIO_SYNC(37),  PIO_SYNC(43),  PIO_SYNC(39),  PIO_SYNC(41)  );  -- Input's 5-1 von den der Slave-Karte-7,
+ IOBP_Input(8)(5 downto 1)  <= ( PIO_SYNC(129), PIO_SYNC(139), PIO_SYNC(127), PIO_SYNC(141), PIO_SYNC(125) );  -- Input's 5-1 von den der Slave-Karte-8,
+ IOBP_Input(9)(5 downto 1)  <= ( PIO_SYNC(20),  PIO_SYNC(28),  PIO_SYNC(22),  PIO_SYNC(26),  PIO_SYNC(24)  );  -- Input's 5-1 von den der Slave-Karte-9,
+ IOBP_Input(10)(5 downto 1) <= ( PIO_SYNC(138), PIO_SYNC(128), PIO_SYNC(140), PIO_SYNC(126), PIO_SYNC(142) );  -- Input's 5-1 von den der Slave-Karte-10,
+ IOBP_Input(11)(5 downto 1) <= ( PIO_SYNC(38),  PIO_SYNC(46),  PIO_SYNC(40),  PIO_SYNC(44),  PIO_SYNC(42)  );  -- Input's 5-1 von den der Slave-Karte-11,
+ IOBP_Input(12)(5 downto 1) <= ( PIO_SYNC(120), PIO_SYNC(110), PIO_SYNC(122), PIO_SYNC(108), PIO_SYNC(124) );  -- Input's 5-1 von den der Slave-Karte-12,
+ 
+ -----------------------------------------------------------------------------------------------------------------------------------------
+ 
+ 
+ ---------------- Output-Register(Maske) für die Input- und Output Sel-LED's vom Slave 1-12
+ --
+ --  IOBP_Sel_LED's sind Low-Aktiv        Bit5 = Output          Bit[4..0]  =  Input[5..1]
+ --        |                                  |                      |
+ IOBP_Sel_LED(1)  <=  not ( IOBP_Masken_Reg5( 0) & IOBP_Masken_Reg1( 4 downto  0) );  -- Register für Sel-LED's vom Slave 1
+ IOBP_Sel_LED(2)  <=  not ( IOBP_Masken_Reg5( 1) & IOBP_Masken_Reg1( 9 downto  5) );  -- Register für Sel-LED's vom Slave 2
+ IOBP_Sel_LED(3)  <=  not ( IOBP_Masken_Reg5( 2) & IOBP_Masken_Reg1(14 downto 10) );  -- Register für Sel-LED's vom Slave 3
+ IOBP_Sel_LED(4)  <=  not ( IOBP_Masken_Reg5( 3) & IOBP_Masken_Reg2( 4 downto  0) );  -- Register für Sel-LED's vom Slave 4
+ IOBP_Sel_LED(5)  <=  not ( IOBP_Masken_Reg5( 4) & IOBP_Masken_Reg2( 9 downto  5) );  -- Register für Sel-LED's vom Slave 5
+ IOBP_Sel_LED(6)  <=  not ( IOBP_Masken_Reg5( 5) & IOBP_Masken_Reg2(14 downto 10) );  -- Register für Sel-LED's vom Slave 6
+ IOBP_Sel_LED(7)  <=  not ( IOBP_Masken_Reg5( 6) & IOBP_Masken_Reg3( 4 downto  0) );  -- Register für Sel-LED's vom Slave 7
+ IOBP_Sel_LED(8)  <=  not ( IOBP_Masken_Reg5( 7) & IOBP_Masken_Reg3( 9 downto  5) );  -- Register für Sel-LED's vom Slave 8
+ IOBP_Sel_LED(9)  <=  not ( IOBP_Masken_Reg5( 8) & IOBP_Masken_Reg3(14 downto 10) );  -- Register für Sel-LED's vom Slave 9
+ IOBP_Sel_LED(10) <=  not ( IOBP_Masken_Reg5( 9) & IOBP_Masken_Reg4( 4 downto  0) );  -- Register für Sel-LED's vom Slave 10
+ IOBP_Sel_LED(11) <=  not ( IOBP_Masken_Reg5(10) & IOBP_Masken_Reg4( 9 downto  5) );  -- Register für Sel-LED's vom Slave 11
+ IOBP_Sel_LED(12) <=  not ( IOBP_Masken_Reg5(11) & IOBP_Masken_Reg4(14 downto 10) );  -- Register für Sel-LED's vom Slave 12
+ 
+ --################################ Debounce oder Sync Input's  ##################################IOBP_Output
+ 
+ --  Deb60_in = H-Aktiv             IOBP_Input = L-Aktiv
+ --        |                                |
+ Deb60_in( 4 DOWNTO  0)   <=  not IOBP_Input( 1)(5 downto 1);  -- Input-Daten
+ Deb60_in( 9 DOWNTO  5)   <=  not IOBP_Input( 2)(5 downto 1);
+ Deb60_in(14 DOWNTO 10)   <=  not IOBP_Input( 3)(5 downto 1);
+ Deb60_in(19 DOWNTO 15)   <=  not IOBP_Input( 4)(5 downto 1);
+ Deb60_in(24 DOWNTO 20)   <=  not IOBP_Input( 5)(5 downto 1);
+ Deb60_in(29 DOWNTO 25)   <=  not IOBP_Input( 6)(5 downto 1);
+ Deb60_in(34 DOWNTO 30)   <=  not IOBP_Input( 7)(5 downto 1);
+ Deb60_in(39 DOWNTO 35)   <=  not IOBP_Input( 8)(5 downto 1);
+ Deb60_in(44 DOWNTO 40)   <=  not IOBP_Input( 9)(5 downto 1);
+ Deb60_in(49 DOWNTO 45)   <=  not IOBP_Input(10)(5 downto 1);
+ Deb60_in(54 DOWNTO 50)   <=  not IOBP_Input(11)(5 downto 1);
+ Deb60_in(59 DOWNTO 55)   <=  not IOBP_Input(12)(5 downto 1);
+ 
+ Syn60(4 DOWNTO 0)        <=  not IOBP_Input( 1)(5 downto 1);
+ Syn60(9 DOWNTO 5)        <=  not IOBP_Input( 2)(5 downto 1);
+ Syn60(14 DOWNTO 10)      <=  not IOBP_Input( 3)(5 downto 1);
+ Syn60(19 DOWNTO 15)      <=  not IOBP_Input( 4)(5 downto 1);
+ Syn60(24 DOWNTO 20)      <=  not IOBP_Input( 5)(5 downto 1);
+ Syn60(29 DOWNTO 25)      <=  not IOBP_Input( 6)(5 downto 1);
+ Syn60(34 DOWNTO 30)      <=  not IOBP_Input( 7)(5 downto 1);
+ Syn60(39 DOWNTO 35)      <=  not IOBP_Input( 8)(5 downto 1);
+ Syn60(44 DOWNTO 40)      <=  not IOBP_Input( 9)(5 downto 1);
+ Syn60(49 DOWNTO 45)      <=  not IOBP_Input(10)(5 downto 1);
+ Syn60(54 DOWNTO 50)      <=  not IOBP_Input(11)(5 downto 1);
+ Syn60(59 DOWNTO 55)      <=  not IOBP_Input(12)(5 downto 1);
+ 
+ 
+ IF  (Diob_Config1(11) = '1')  THEN Deb_Sync60 <=  Syn60;         -- Dobounce = Abgeschaltet ==> nur Synchronisation
+                               ELSE Deb_Sync60 <=  Deb60_out;     -- Debounce und Synchronisation
+ END IF;
+ --------------------------------
+ 
+ --  ################################ Input's AND Maske zu Input-Register ##################################
+ 
+ --                  Input-Test, Stecker 1, 2, 3
+ 
+ AW_Input_Reg(1)( 4 downto  0) <=   (Deb_Sync60( 4 downto  0) AND not IOBP_Masken_Reg1( 4 downto  0));  -- Input, IO-Modul Nr. 1
+ AW_Input_Reg(1)( 9 downto  5) <=   (Deb_Sync60( 9 downto  5) AND not IOBP_Masken_Reg1( 9 downto  5));  -- Input, IO-Modul Nr. 2
+ AW_Input_Reg(1)(14 downto 10) <=   (Deb_Sync60(14 downto 10) AND not IOBP_Masken_Reg1(14 downto 10));  -- Input, IO-Modul Nr. 3
+ AW_Input_Reg(1)(15) <=  '0';
+ 
+ --                  Input-Test, Stecker 4, 5, 6
+ AW_Input_Reg(2)( 4 downto  0) <=   (Deb_Sync60(19 DOWNTO 15) AND not IOBP_Masken_Reg2( 4 downto  0));  -- Input, IO-Modul Nr. 4
+ AW_Input_Reg(2)( 9 downto  5) <=   (Deb_Sync60(24 DOWNTO 20) AND not IOBP_Masken_Reg2( 9 downto  5));  -- Input, IO-Modul Nr. 5
+ AW_Input_Reg(2)(14 downto 10) <=   (Deb_Sync60(29 DOWNTO 25) AND not IOBP_Masken_Reg2(14 downto 10));  -- Input, IO-Modul Nr. 6
+ AW_Input_Reg(2)(15) <=  '0';
+ 
+ --                  Input-Test, Stecker 7, 8, 9
+ 
+ AW_Input_Reg(3)( 4 downto  0) <=   (Deb_Sync60(34 DOWNTO 30) AND not IOBP_Masken_Reg3( 4 downto  0));  -- Input, IO-Modul Nr. 7
+ AW_Input_Reg(3)( 9 downto  5) <=   (Deb_Sync60(39 DOWNTO 35) AND not IOBP_Masken_Reg3( 9 downto  5));  -- Input, IO-Modul Nr. 8
+ AW_Input_Reg(3)(14 downto 10) <=   (Deb_Sync60(44 DOWNTO 40) AND not IOBP_Masken_Reg3(14 downto 10));  -- Input, IO-Modul Nr. 9
+ AW_Input_Reg(3)(15) <=  '0';
+ 
+ --                    Input-Test, Stecker 10, 11, 12
+ 
+ AW_Input_Reg(4)( 4 downto  0) <=   (Deb_Sync60(49 DOWNTO 45) AND not IOBP_Masken_Reg4( 4 downto  0));  -- Input, IO-Modul Nr. 10
+ AW_Input_Reg(4)( 9 downto  5) <=   (Deb_Sync60(54 DOWNTO 50) AND not IOBP_Masken_Reg4( 9 downto  5));  -- Input, IO-Modul Nr. 11
+ AW_Input_Reg(4)(14 downto 10) <=   (Deb_Sync60(59 DOWNTO 55) AND not IOBP_Masken_Reg4(14 downto 10));  -- Input, IO-Modul Nr. 12
+ AW_Input_Reg(4)(15) <=  '0';
+ IOBP_Output(1)  <= (AW_Output_Reg(1)( 0) AND not IOBP_Masken_Reg5( 0));  -- Output von Slave 1
+ IOBP_Output(2)  <= (AW_Output_Reg(1)( 1) AND not IOBP_Masken_Reg5( 1));  -- Output von Slave 2
+ IOBP_Output(3)  <= (AW_Output_Reg(1)( 2) AND not IOBP_Masken_Reg5( 2));  -- Output von Slave 3
+ IOBP_Output(4)  <= (AW_Output_Reg(1)( 3) AND not IOBP_Masken_Reg5( 3));  -- Output von Slave 4
+ IOBP_Output(5)  <= (AW_Output_Reg(1)( 4) AND not IOBP_Masken_Reg5( 4));  -- Output von Slave 5
+ IOBP_Output(6)  <= (AW_Output_Reg(1)( 5) AND not IOBP_Masken_Reg5( 5));  -- Output von Slave 6
+ IOBP_Output(7)  <= (AW_Output_Reg(1)( 6) AND not IOBP_Masken_Reg5( 6));  -- Output von Slave 7
+ IOBP_Output(8)  <= (AW_Output_Reg(1)( 7) AND not IOBP_Masken_Reg5( 7));  -- Output von Slave 8
+ IOBP_Output(9)  <= (AW_Output_Reg(1)( 8) AND not IOBP_Masken_Reg5( 8));  -- Output von Slave 9
+ IOBP_Output(10) <= (AW_Output_Reg(1)( 9) AND not IOBP_Masken_Reg5( 9));  -- Output von Slave 10
+ IOBP_Output(11) <= (AW_Output_Reg(1)(10) AND not IOBP_Masken_Reg5(10));  -- Output von Slave 11
+ IOBP_Output(12) <= (AW_Output_Reg(1)(11) AND not IOBP_Masken_Reg5(11));  -- Output von Slave 12
+  
+ 
 end case;
+--end if;
   
         ---------------------------------------------------
 
