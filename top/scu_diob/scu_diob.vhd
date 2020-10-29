@@ -803,7 +803,7 @@ END COMPONENT hw_interlock;
   (
   clk : in std_logic;
     nReset: in std_logic;
-    read_ID_ena : in std_logic;
+ 
     slave1_ID: in std_logic_vector(7 downto 0);
     slave2_ID: in std_logic_vector(7 downto 0);
     slave3_ID: in std_logic_vector(7 downto 0);
@@ -1599,7 +1599,7 @@ END COMPONENT hw_interlock;
   signal IOBP_qd_Dtack:           std_logic;
   signal IOBP_qd_data_to_SCUB:    std_logic_vector(15 downto 0);
   
-  signal mx_id_ena: std_logic:='0';
+ 
 
 
   signal    Deb60_in:     std_logic_vector(59 downto 0);
@@ -4089,7 +4089,7 @@ PORT MAP
 (
   clk => clk_sys,
   nReset => rstn_sys,
-  read_ID_ena => mx_id_ena,
+
   slave1_ID => IOBP_ID(1), --IOBP_IDcod(1),
   slave2_ID => IOBP_ID(2), --IOBP_IDcod(2),
   slave3_ID => IOBP_ID(3), --IOBP_IDcod(3),
@@ -4428,7 +4428,7 @@ p_AW_MUX: PROCESS (clk_sys, rstn_sys, Powerup_Done, AW_ID, s_nLED_Out, signal_ta
             AD2_Trigger_Mode, AD2_sw_Trigger, AD2_ext_Trigger, AD2_nCS, AD2_Reset, AD2_ByteSwap, AD2_nCNVST, AD2_Busy, AD2_Out, AD2_ext_Trigger_nLED,
             In8Out8_In, In8Out8_Input, In8Out8_Deb_out, In8Out8_nLED_Lemo_In_o, In8Out8_Out, In8Out8_nLED_Lemo_Out_o,
             -- IOBP_SK_Output, IOBP_SK_Input, qud_mtx,  mx_id_ena, IOBP_IDcod
-            IOBP_SK_Output, IOBP_SK_Input, qud_mtx,  mx_id_ena
+            IOBP_SK_Output, IOBP_SK_Input, qud_mtx
             )
 
 
@@ -6951,9 +6951,7 @@ BEGIN
     END IF;
 
 
---  ################################ Input's AND Maske zu Input-Register ####################    extension_cid_group  <= c_AW_INLB12S.CID; -- extension card: cid_group, "FG902_050"
-  
-    extension_cid_system <= c_cid_system;       -- extension card: CSCOHW##############
+--  ################################ Input's AND Maske zu Input-Register ###################
 
 --                  Input-Test, Stecker 1, 2, 3
 

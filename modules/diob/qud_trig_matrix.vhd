@@ -44,7 +44,6 @@ PORT
 (
 clk : in std_logic;
   nReset: in std_logic;
-  read_ID_ena : in std_logic;
   slave1_ID: in std_logic_vector(7 downto 0);
   slave2_ID: in std_logic_vector(7 downto 0);
   slave3_ID: in std_logic_vector(7 downto 0);
@@ -78,7 +77,7 @@ begin
 	
 
 
-Matrix_configuration_proc: process (clk, nReset, read_ID_ena)
+Matrix_configuration_proc: process (clk, nReset)
 
 begin
  
@@ -94,7 +93,7 @@ begin
         IOBP_slot_check_state <= IOBP_slot_check_idle;
 
     elsif (clk'EVENT AND clk = '1') then
-        if read_ID_ena ='1' then 
+        
 
         case IOBP_slot_check_state is
             when IOBP_slot_check_idle	=>  IN_LEMO_cnt <=0;
@@ -407,7 +406,7 @@ begin
 
                  when others =>           IOBP_slot_check_state <= IOBP_slot_check_idle;
         end case;
-		end if;
+		
 	end if;
     end process Matrix_configuration_proc; 
 
