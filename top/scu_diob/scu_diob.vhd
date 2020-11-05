@@ -7090,8 +7090,8 @@ extension_cid_system <= c_cid_system;       -- extension card: CSCOHW
 AW_Status1(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
 AW_Status2(15 downto 0)  <=  (OTHERS => '0');					    -- Unbenutzte Status-Bits
 
-Max_AWOut_Reg_Nr     <= 2;  -- Maximale AWOut-Reg-Nummer der Anwendung
-Max_AWIn_Reg_Nr      <= 5;  -- Maximale AWIn-Reg-Nummer der Anwendung
+Max_AWOut_Reg_Nr     <= 3;  -- Maximale AWOut-Reg-Nummer der Anwendung
+Max_AWIn_Reg_Nr      <= 1;  -- Maximale AWIn-Reg-Nummer der Anwendung
 Min_AWIn_Deb_Time    <= 0;  -- Minimale Debounce-Zeit 2 Hoch "Min_AWIn_Deb_Time" in us
   
 --############################# Set Debounce- oder Syn-Time ######################################
@@ -7179,7 +7179,7 @@ END IF;
 
 case qud_mtx is
 
-when "00000001" | "00000110" => 
+when "00000001" | "00000110"  => 
 
 (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
  PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
@@ -7349,7 +7349,7 @@ IOBP_Aktiv_LED_i(12) <=  (IOBP_Output(12)   &  Deb60_out(59 DOWNTO 55));  -- Sig
 
 --------------------------------------------------------------------------------------------------------------------------------------------------
 --else          --------------------------------------------------------------------------------------------------------------------------------------------------
-
+--
 when "00000010" | "00000100" | "00000011" |"00000101"  => 
 
 -- STANDARD MATRIX 										
@@ -7366,14 +7366,16 @@ when "00000010" | "00000100" | "00000011" |"00000101"  =>
 --		9 x [6 optical inputs] 
 --		1 x [6 optical outputs]
 
-(PIO_OUT(142), PIO_OUT(126), PIO_OUT(140), PIO_OUT(128), PIO_OUT(120), PIO_OUT(130)) <= IOBP_SK_Output(1); -- Slave-card 10 -> 6 optical outputs
-(PIO_OUT(42), PIO_OUT(44), PIO_OUT(40), PIO_OUT(46), PIO_OUT(31), PIO_OUT(48))       <= IOBP_SK_Output(2); -- Slave-card 11 ->6 optical output
-(PIO_OUT(124), PIO_OUT(108), PIO_OUT(122), PIO_OUT(110), PIO_OUT(120), PIO_OUT(112))  <= IOBP_SK_Output(3); -- Slave-card 12 ->6 optical output
+--(PIO_OUT(142), PIO_OUT(126), PIO_OUT(140), PIO_OUT(128), PIO_OUT(120), PIO_OUT(130)) <= IOBP_SK_Output(1); -- Slave-card 10 -> 6 optical outputs
+(PIO_OUT(130),  PIO_OUT(120),  PIO_OUT(128), PIO_OUT(140), PIO_OUT(126), PIO_OUT(142)) <= IOBP_SK_Output(1); -- Slave-card 10 -> 6 optical outputs
+--(PIO_OUT(42), PIO_OUT(44), PIO_OUT(40), PIO_OUT(46), PIO_OUT(31), PIO_OUT(48))       <= IOBP_SK_Output(2); -- Slave-card 11 ->6 optical outputs
+(PIO_OUT(48), PIO_OUT(31), PIO_OUT(46), PIO_OUT(40), PIO_OUT(44), PIO_OUT(42))       <= IOBP_SK_Output(2); -- Slave-card 11 ->6 optical output
+--(PIO_OUT(124), PIO_OUT(108), PIO_OUT(122), PIO_OUT(110), PIO_OUT(120), PIO_OUT(112))  <= IOBP_SK_Output(3); -- Slave-card 12 ->6 optical output
+(PIO_OUT(112), PIO_OUT(120), PIO_OUT(110), PIO_OUT(122), PIO_OUT(108), PIO_OUT(124))  <= IOBP_SK_Output(3); -- Slave-card 12 ->6 optical output
 
-
-(PIO_ENA(142), PIO_ENA(126), PIO_ENA(140), PIO_ENA(128), PIO_ENA(120), PIO_ENA(130), 
-PIO_ENA(42), PIO_ENA(44), PIO_ENA(40), PIO_ENA(46), PIO_ENA(31), PIO_ENA(48),       
-PIO_ENA(124), PIO_ENA(108), PIO_ENA(122), PIO_ENA(110), PIO_ENA(120), PIO_ENA(112))  <= std_logic_vector'("111111111111111111");   -- Output Enable
+(PIO_OUT(130),  PIO_OUT(120),  PIO_OUT(128), PIO_OUT(140), PIO_OUT(126), PIO_OUT(142),
+PIO_OUT(48), PIO_OUT(31), PIO_OUT(46), PIO_OUT(40), PIO_OUT(44), PIO_OUT(42),
+PIO_OUT(112), PIO_OUT(120), PIO_OUT(110), PIO_OUT(122), PIO_OUT(108), PIO_OUT(124))  <= std_logic_vector'("111111111111111111");   -- Output Enable
 
 
 IOBP_SK_Input(1)  <= ( PIO_SYNC(62),  PIO_SYNC(54),  PIO_SYNC(60),  PIO_SYNC(52),  PIO_SYNC(58), PIO_SYNC(56));     -- Slave-card 1 -> 6 electrical or 6 optical inputs
