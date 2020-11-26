@@ -228,7 +228,7 @@ architecture scu_diob_arch of scu_diob is
     CONSTANT c_IOBP_ID_Base_Addr:                Integer := 16#0638#;  -- IO-Backplane Modul-ID-Register
     CONSTANT c_HW_Interlock_Base_Addr:           Integer := 16#0640#;  -- IO-Backplane Spill Abort HW Interlock
     CONSTANT c_IOBP_QD_Base_Addr:                Integer := 16#0650#;  -- IO-Backplane Quench Detection
-
+    CONSTANT c_IOBP_READBACK_Base_Addr:          Integer := 16#0670#;  -- IO-Backplane Output Readback Register
 
 
 
@@ -1518,7 +1518,7 @@ END COMPONENT hw_interlock;
 --  +============================================================================================================================+
 
 
-  signal IOBP_Output: std_logic_vector(12 downto 1); -- Data_Output "Slave-Karten 1-12"
+  signal IOBP_Output: std_logic_vector(18 downto 1); -- Data_Output "Slave-Karten 1-12"
 
   TYPE   t_input_array      is array (1 to 12) of std_logic_vector(5 downto 1);
   signal IOBP_Input:        t_input_array;    -- Inputs der "Slave-Karten"
@@ -1586,7 +1586,7 @@ END COMPONENT hw_interlock;
   signal IOBP_id_rd_active:       std_logic;
   signal IOBP_id_Dtack:           std_logic;
   signal IOBP_id_data_to_SCUB:    std_logic_vector(15 downto 0);
-
+  signal IOBP_in_data_to_SCUB:    std_logic_vector(15 downto 0);
   signal IOBP_hw_il_rd_active:       std_logic;
   signal IOBP_hw_il_Dtack:           std_logic;
   signal IOBP_hw_il_data_to_SCUB:    std_logic_vector(15 downto 0);
@@ -1598,7 +1598,9 @@ END COMPONENT hw_interlock;
   signal IOBP_qd_rd_active:       std_logic;
   signal IOBP_qd_Dtack:           std_logic;
   signal IOBP_qd_data_to_SCUB:    std_logic_vector(15 downto 0);
-  
+  signal IOBP_in_rd_active:       std_logic;
+  signal IOBP_in_Dtack:           std_logic;
+
  
 
 
@@ -1622,6 +1624,8 @@ signal IOBP_SK_Output: t_SK_array;     -- Outputs "Slave-Karten 1-12"  --but I u
 signal IOBP_SK_Input:  t_SK_array;    -- Inputs "Slave-Karten 1-12"
 signal IOBP_Masken_Reg6:        std_logic_vector(15 downto 0);
 signal IOBP_Masken_Reg7:        std_logic_vector(15 downto 0);
+
+signal IOBP_Output_Readback: t_IO_Reg_0_to_7_Array;
 
 
 --  +============================================================================================================================+
@@ -2161,10 +2165,15 @@ io_port: IO_4x8
 
 p_AW_Out_Mux:  PROCESS (Tag_Maske_Reg, Tag_Outp_Reg, SCU_AW_Output_Reg)
     BEGin
-    for i in 0 to 15 loop
+    --AW_Output_Reg(1)(0)  <= '1';
+   -- for i in 1 to 15 loop
+     -- IF Tag_Maske_Reg(1)(i)  = '0'then AW_Output_Reg(1)(i)  <= SCU_AW_Output_Reg(1)(i);  else  AW_Output_Reg(1)(i)  <= Tag_Outp_Reg(1)(i);  end if;    -- Daten-Reg. AWOut1
+     -- end loop;
 
+    for i in 0 to 15 loop
+      
 ------ Masken-Reg. aus Tag-Ctrl         Daten => Piggy             User-Output-Reg.                Daten => Piggy        Tag aus Tag-Ctrl
-------           |                              |                         |                              |                       |
+------        |                              |                         |                              |                       |
       IF Tag_Maske_Reg(1)(i)  = '0' then AW_Output_Reg(1)(i)  <= SCU_AW_Output_Reg(1)(i);  else  AW_Output_Reg(1)(i)  <= Tag_Outp_Reg(1)(i);  end if;    -- Daten-Reg. AWOut1
       IF Tag_Maske_Reg(2)(i)  = '0' then AW_Output_Reg(2)(i)  <= SCU_AW_Output_Reg(2)(i);  else  AW_Output_Reg(2)(i)  <= Tag_Outp_Reg(2)(i);  end if;    -- Daten-Reg. AWOut2
       IF Tag_Maske_Reg(3)(i)  = '0' then AW_Output_Reg(3)(i)  <= SCU_AW_Output_Reg(3)(i);  else  AW_Output_Reg(3)(i)  <= Tag_Outp_Reg(3)(i);  end if;    -- Daten-Reg. AWOut3
@@ -2295,6 +2304,34 @@ port map  (
       Data_to_SCUB       =>  IOBP_id_data_to_SCUB
     );
 
+    IOBP_Readout_Reg: in_reg
+    generic map(
+          Base_addr =>  c_IOBP_READBACK_Base_Addr
+          )
+    port map  (
+          Adr_from_SCUB_LA   =>  ADR_from_SCUB_LA,
+          Data_from_SCUB_LA  =>  Data_from_SCUB_LA,
+          Ext_Adr_Val        =>  Ext_Adr_Val,
+          Ext_Rd_active      =>  Ext_Rd_active,
+          Ext_Rd_fin         =>  Ext_Rd_fin,
+          Ext_Wr_active      =>  Ext_Wr_active,
+          Ext_Wr_fin         =>  SCU_Ext_Wr_fin,
+          clk                =>  clk_sys,
+          nReset             =>  rstn_sys,
+    --
+          Reg_In1            =>  IOBP_Output_Readback(0),
+          Reg_In2            =>  IOBP_Output_Readback(1),
+          Reg_In3            =>  IOBP_Output_Readback(2),
+          Reg_In4            =>  IOBP_Output_Readback(3),
+          Reg_In5            =>  IOBP_Output_Readback(4),
+          Reg_In6            =>  IOBP_Output_Readback(5),
+          Reg_In7            =>  IOBP_Output_Readback(6),
+          Reg_In8            =>  IOBP_Output_Readback(7),
+    --
+          Reg_rd_active      =>  IOBP_in_rd_active,
+          Dtack_to_SCUB      =>  IOBP_in_Dtack,
+          Data_to_SCUB       =>  IOBP_in_data_to_SCUB
+        );
     IOBP_Hardware_Interlock: hw_interlock
     generic map(
           Base_addr =>  c_HW_Interlock_Base_Addr
@@ -2873,6 +2910,7 @@ rd_port_mux:  process ( clk_switch_rd_active,     clk_switch_rd_data,
                         io_port_rd_active,        io_port_data_to_SCUB,
                         IOBP_msk_rd_active,       IOBP_msk_data_to_SCUB,
                         IOBP_id_rd_active,        IOBP_id_data_to_SCUB,
+                        IOBP_in_rd_active,        IOBP_in_data_to_SCUB,
                         ATR_DAC_rd_active,        ATR_DAC_data_to_SCUB,
                         atr_comp_ctrl_rd_active,  atr_comp_ctrl_data_to_SCUB,
                         atr_puls_ctrl_rd_active,  atr_puls_ctrl_data_to_SCUB
@@ -2880,37 +2918,39 @@ rd_port_mux:  process ( clk_switch_rd_active,     clk_switch_rd_data,
 
 
   --variable sel: unsigned(20 downto 0);
- -- variable sel: unsigned(19 downto 0);
- variable sel: unsigned(18 downto 0);
+  variable sel: unsigned(19 downto 0);
+-- variable sel: unsigned(18 downto 0);
   begin
     --sel := daq_user_rd_active & IOBP_conf_rd_active & IOBP_hw_il_rd_active      & IOBP_qd_rd_active       & tmr_rd_active           & INL_xor1_rd_active        & INL_msk1_rd_active      &
-        sel := IOBP_hw_il_rd_active      & IOBP_qd_rd_active       & tmr_rd_active           & INL_xor1_rd_active        & INL_msk1_rd_active      &      
+        sel :=  IOBP_in_rd_active  &
+        IOBP_hw_il_rd_active      & IOBP_qd_rd_active       & tmr_rd_active           & INL_xor1_rd_active        & INL_msk1_rd_active      &      
             AW_Port1_rd_active        & FG_1_rd_active          & FG_2_rd_active          & wb_scu_rd_active          & clk_switch_rd_active      &
             Conf_Sts1_rd_active       & Tag_Ctrl1_rd_active     & addac_rd_active         & io_port_rd_active         &
-            IOBP_msk_rd_active        & IOBP_id_rd_active       & ATR_DAC_rd_active       & atr_comp_ctrl_rd_active   & atr_puls_ctrl_rd_active ;
+            IOBP_msk_rd_active        & IOBP_id_rd_active       & ATR_DAC_rd_active       & atr_comp_ctrl_rd_active   & atr_puls_ctrl_rd_active;
 
   case sel IS
      -- when "100000000000000000000" => Data_to_SCUB <= daq_data_to_SCUB;
     --  when "10000000000000000000" => Data_to_SCUB <= IOBP_conf_data_to_SCUB;
-      when "1000000000000000000" => Data_to_SCUB <= IOBP_hw_il_data_to_SCUB;
-      when "0100000000000000000" => Data_to_SCUB <= IOBP_qd_data_to_SCUB;
-      when "0010000000000000000" => Data_to_SCUB <= tmr_data_to_SCUB;
-      when "0001000000000000000" => Data_to_SCUB <= INL_xor1_data_to_SCUB;
-      when "0000100000000000000" => Data_to_SCUB <= INL_msk1_data_to_SCUB;
-      when "0000010000000000000" => Data_to_SCUB <= AW_Port1_data_to_SCUB;
-      when "0000001000000000000" => Data_to_SCUB <= FG_1_data_to_SCUB;
-      when "0000000100000000000" => Data_to_SCUB <= FG_2_data_to_SCUB;
-      when "0000000010000000000" => Data_to_SCUB <= wb_scu_data_to_SCUB;
-      when "0000000001000000000" => Data_to_SCUB <= clk_switch_rd_data;
-      when "0000000000100000000" => Data_to_SCUB <= Conf_Sts1_data_to_SCUB;
-      when "0000000000010000000" => Data_to_SCUB <= Tag_Ctrl1_data_to_SCUB;
-      when "0000000000001000000" => Data_to_SCUB <= addac_Data_to_SCUB;
-      when "0000000000000100000" => Data_to_SCUB <= io_port_data_to_SCUB;
-      when "0000000000000010000" => Data_to_SCUB <= IOBP_msk_data_to_SCUB;
-      when "0000000000000001000" => Data_to_SCUB <= IOBP_id_data_to_SCUB;
-      when "0000000000000000100" => Data_to_SCUB <= ATR_DAC_data_to_SCUB;
-      when "0000000000000000010" => Data_to_SCUB <= atr_comp_ctrl_data_to_SCUB;
-      when "0000000000000000001" => Data_to_SCUB <= atr_puls_ctrl_data_to_SCUB;
+      when "10000000000000000000" => Data_to_SCUB <= IOBP_in_data_to_SCUB;
+      when "01000000000000000000" => Data_to_SCUB <= IOBP_hw_il_data_to_SCUB;
+      when "00100000000000000000" => Data_to_SCUB <= IOBP_qd_data_to_SCUB;
+      when "00010000000000000000" => Data_to_SCUB <= tmr_data_to_SCUB;
+      when "00001000000000000000" => Data_to_SCUB <= INL_xor1_data_to_SCUB;
+      when "00000100000000000000" => Data_to_SCUB <= INL_msk1_data_to_SCUB;
+      when "00000010000000000000" => Data_to_SCUB <= AW_Port1_data_to_SCUB;
+      when "00000001000000000000" => Data_to_SCUB <= FG_1_data_to_SCUB;
+      when "00000000100000000000" => Data_to_SCUB <= FG_2_data_to_SCUB;
+      when "00000000010000000000" => Data_to_SCUB <= wb_scu_data_to_SCUB;
+      when "00000000001000000000" => Data_to_SCUB <= clk_switch_rd_data;
+      when "00000000000100000000" => Data_to_SCUB <= Conf_Sts1_data_to_SCUB;
+      when "00000000000010000000" => Data_to_SCUB <= Tag_Ctrl1_data_to_SCUB;
+      when "00000000000001000000" => Data_to_SCUB <= addac_Data_to_SCUB;
+      when "00000000000000100000" => Data_to_SCUB <= io_port_data_to_SCUB;
+      when "00000000000000010000" => Data_to_SCUB <= IOBP_msk_data_to_SCUB;
+      when "00000000000000001000" => Data_to_SCUB <= IOBP_id_data_to_SCUB;
+      when "00000000000000000100" => Data_to_SCUB <= ATR_DAC_data_to_SCUB;
+      when "00000000000000000010" => Data_to_SCUB <= atr_comp_ctrl_data_to_SCUB;
+      when "00000000000000000001" => Data_to_SCUB <= atr_puls_ctrl_data_to_SCUB;
 
 
       when others      => Data_to_SCUB <= (others => '0');
@@ -2924,7 +2964,7 @@ rd_port_mux:  process ( clk_switch_rd_active,     clk_switch_rd_data,
     Dtack_to_SCUB <= ( tmr_dtack      or INL_xor1_Dtack       or INL_msk1_Dtack       or AW_Port1_Dtack   or FG_1_dtack       or
                        FG_2_dtack     or wb_scu_dtack         or clk_switch_dtack     or Conf_Sts1_Dtack  or Tag_Ctrl1_Dtack  or
                        addac_Dtack    or io_port_Dtack        or IOBP_msk_Dtack       or IOBP_id_Dtack    or  IOBP_qd_Dtack   or
-                       ATR_DAC_Dtack  or atr_comp_ctrl_Dtack  or atr_puls_ctrl_Dtack or IOBP_hw_il_Dtack);
+                       ATR_DAC_Dtack  or atr_comp_ctrl_Dtack  or atr_puls_ctrl_Dtack or IOBP_hw_il_Dtack or IOBP_in_Dtack);
                       -- ATR_DAC_Dtack  or atr_comp_ctrl_Dtack  or atr_puls_ctrl_Dtack or IOBP_hw_il_Dtack or IOBP_conf_Dtack or daq_Dtack);
 
     A_nDtack <= NOT(SCUB_Dtack);
@@ -4652,7 +4692,7 @@ BEGIN
     IOBP_SK_Input               <=  (OTHERS => (OTHERS => '0'));    -- Data_Input  "Slave-Karte 1-12"
     IOBP_SK_Output              <=  (OTHERS => (OTHERS => '0'));    -- Data_Output  "Slave-Karte 1-12"
     
-
+    IOBP_Output_Readback        <=  (OTHERS => (OTHERS => '0'));  -- IO-Backplane_ID_Register Readback
     --#################################################################################
     --###                                                                           ###
     --###                    IO-Stecker-Test mit "BrückenStecker                    ###
@@ -6817,7 +6857,7 @@ BEGIN
 
 
     (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
-     PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
+     PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output(12 downto 1); ----------- Data_Output-Pin's der "Slave-Karten 12-1"
 
     (PIO_ENA(112), PIO_ENA(48), PIO_ENA(130), PIO_ENA(30), PIO_ENA(137), PIO_ENA(35),
      PIO_ENA(119), PIO_ENA(53), PIO_ENA(101), PIO_ENA(73), PIO_ENA(96),  PIO_ENA(56))   <= std_logic_vector'("111111111111");   -- Output Enable
@@ -7019,14 +7059,14 @@ BEGIN
 
       spill_req <=  Deb60_in(7) & Deb60_in(2) & Deb60_in(5) & Deb60_in(0);
       spill_pause <= "00" & Deb60_in(6) & Deb60_in(1);
-      IOBP_Output <= "0000" & TS_Abort & "000" & KO_abort & RF_abort  & FQ_rst & FQ_abort;
+      IOBP_Output <= "0000000000" & TS_Abort & "000" & KO_abort & RF_abort  & FQ_rst & FQ_abort;
 
       UIO_Out(0)    <= spill_abort_HWI_out(0);
       UIO_Out(1)    <= spill_abort_HWI_out(1);
       UIO_ENA(1 downto 0)    <=  (others => '1');                  -- Output-Enable
 
     when x"DEDE" => --Quench Detection Development
-      IOBP_Output <= "0000000" & quench_out(3) & quench_out(0) & quench_out (2) & quench_out (1) & quench_out(0);
+      IOBP_Output <= "0000000000000" & quench_out(3) & quench_out(0) & quench_out (2) & quench_out (1) & quench_out(0);
       quench_enable_signal(1) <= quench_reg (1) (9 downto 0) &  quench_reg (0) (14 downto 0);
       quench_enable_signal(2) <= quench_reg (3) (9 downto 0) &  quench_reg (2) (14 downto 0);
       quench_enable_signal(3) <= quench_reg (5) (9 downto 0) &  quench_reg (4) (14 downto 0);
@@ -7173,7 +7213,6 @@ END IF;
 -----------------------------------------------------------------------------------------------------------------------------------------
 
 
-
 --========================== Trigger Matrix Konfigurationen ======================================
 
 
@@ -7182,7 +7221,7 @@ case qud_mtx is
 when "00000001" | "00000110"  => 
 
 (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
- PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
+ PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output(12 downto 1); ----------- Data_Output-Pin's der "Slave-Karten 12-1"
 
 (PIO_ENA(112), PIO_ENA(48), PIO_ENA(130), PIO_ENA(30), PIO_ENA(137), PIO_ENA(35),
  PIO_ENA(119), PIO_ENA(53), PIO_ENA(101), PIO_ENA(73), PIO_ENA(96),  PIO_ENA(56))   <= std_logic_vector'("111111111111");   -- Output Enable
@@ -7297,14 +7336,14 @@ when x"ABDE" =>
 
   spill_req <=  Deb60_in(7) & Deb60_in(2) & Deb60_in(5) & Deb60_in(0);
   spill_pause <= "00" & Deb60_in(6) & Deb60_in(1);
-  IOBP_Output <= "0000" & TS_Abort & "000" & KO_abort & RF_abort  & FQ_rst & FQ_abort;
+  IOBP_Output <= "0000000000" & TS_Abort & "000" & KO_abort & RF_abort  & FQ_rst & FQ_abort;
 
   UIO_Out(0)    <= spill_abort_HWI_out(0);
   UIO_Out(1)    <= spill_abort_HWI_out(1);
   UIO_ENA(1 downto 0)    <=  (others => '1');                  -- Output-Enable
 
 when x"DEDE" => --Quench Detection Development
-  IOBP_Output <= "0000000" & quench_out(3) & quench_out(0) & quench_out (2) & quench_out (1) & quench_out(0);
+  IOBP_Output <= "0000000000000" & quench_out(3) & quench_out(0) & quench_out (2) & quench_out (1) & quench_out(0);
   quench_enable_signal(1) <= quench_reg (1) (9 downto 0) &  quench_reg (0) (14 downto 0);
   quench_enable_signal(2) <= quench_reg (3) (9 downto 0) &  quench_reg (2) (14 downto 0);
   quench_enable_signal(3) <= quench_reg (5) (9 downto 0) &  quench_reg (4) (14 downto 0);
@@ -7314,7 +7353,7 @@ when x"DEDE" => --Quench Detection Development
 
 when OTHERS =>
 --  STANDARD OUTPUT OUTREG
---                                                    MaskenBit=0 --> Enable
+--                                                 MaskenBit=0 --> Enable
   IOBP_Output(1)  <= (AW_Output_Reg(1)( 0) AND not IOBP_Masken_Reg5( 0));  -- Output von Slave 1
   IOBP_Output(2)  <= (AW_Output_Reg(1)( 1) AND not IOBP_Masken_Reg5( 1));  -- Output von Slave 2
   IOBP_Output(3)  <= (AW_Output_Reg(1)( 2) AND not IOBP_Masken_Reg5( 2));  -- Output von Slave 3
@@ -7329,6 +7368,27 @@ when OTHERS =>
   IOBP_Output(12) <= (AW_Output_Reg(1)(11) AND not IOBP_Masken_Reg5(11));  -- Output von Slave 12
 end case;
 
+---output readback
+--readback
+--IOBP_Output_Readback(0) <= "0000000000"& IOBP_Output(6 downto 1); 
+--IOBP_Output_Readback(1) <= "0000000000"& IOBP_Output(12 downto 7);
+IOBP_Output_Readback(0) <= "0000"& IOBP_Output(12 downto 1);
+IOBP_Output_Readback(1) <=  (OTHERS => '0');
+IOBP_Output_Readback(2) <=  (OTHERS => '0');
+IOBP_Output_Readback(3) <=  (OTHERS => '0');
+IOBP_Output_Readback(4) <=  (OTHERS => '0');
+IOBP_Output_Readback(5) <=  (OTHERS => '0');
+IOBP_Output_Readback(6) <= (OTHERS => '0');
+IOBP_Output_Readback(7) <= (OTHERS => '0');
+
+--IOBP_Output_Readback(0) <= "0000000000000" & IOBP_Output(3 downto 1); --
+--IOBP_Output_Readback(1) <= "0000000000000" & IOBP_Output(6 downto 4);
+--IOBP_Output_Readback(2) <= "0000000000000" & IOBP_Output(9 downto 7);
+--IOBP_Output_Readback(3) <= "0000000000000" & IOBP_Output(12 downto 10);
+--IOBP_Output_Readback(4) <=  "0000000000000" & IOBP_Output(15 downto 13);
+--IOBP_Output_Readback(5) <= "0000000000000" & IOBP_Output(18 downto 16);
+--IOBP_Output_Readback(6) <= (OTHERS => '0');
+--IOBP_Output_Readback(7) <= (OTHERS => '0');
 
 --################################ Aktiv-Led's ##################################
 --
@@ -7336,15 +7396,7 @@ end case;
 --                                   |
 IOBP_Aktiv_LED_i(1)  <=  (IOBP_Output(1)    &  Deb60_out( 4 DOWNTO  0));  -- Signale für Aktiv-LED's
 IOBP_Aktiv_LED_i(2)  <=  (IOBP_Output(2)    &  Deb60_out( 9 DOWNTO  5));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(3)  <=  (IOBP_Output(3)    &  Deb60_out(14 DOWNTO 10));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(4)  <=  (IOBP_Output(4)    &  Deb60_out(19 DOWNTO 15));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(5)  <=  (IOBP_Output(5)    &  Deb60_out(24 DOWNTO 20));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(6)  <=  (IOBP_Output(6)    &  Deb60_out(29 DOWNTO 25));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(7)  <=  (IOBP_Output(7)    &  Deb60_out(34 DOWNTO 30));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(8)  <=  (IOBP_Output(8)    &  Deb60_out(39 DOWNTO 35));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(9)  <=  (IOBP_Output(9)    &  Deb60_out(44 DOWNTO 40));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(10) <=  (IOBP_Output(10)   &  Deb60_out(49 DOWNTO 45));  -- Signale für Aktiv-LED's
-IOBP_Aktiv_LED_i(11) <=  (IOBP_Output(11)   &  Deb60_out(54 DOWNTO 50));  -- Signale für Aktiv-LED's
+IOBP_Aktiv_LED_i(3)  <=  (IOBP_Output(3)    &  Deb60_out(14 DOWNTO 10));  -- Signale für Aktiv-LED'sIOBP_SK_Output
 IOBP_Aktiv_LED_i(12) <=  (IOBP_Output(12)   &  Deb60_out(59 DOWNTO 55));  -- Signale für Aktiv-LED's
 
 --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -7388,7 +7440,16 @@ IOBP_SK_Input(7)  <= ( PIO_SYNC(45),  PIO_SYNC(37),  PIO_SYNC(43),  PIO_SYNC(39)
 IOBP_SK_Input(8)  <= ( PIO_SYNC(129), PIO_SYNC(139), PIO_SYNC(127), PIO_SYNC(141), PIO_SYNC(125), PIO_SYNC(137));   -- Slave-card 8 -> 6 electrical or 6 optical inputs
 IOBP_SK_Input(9)  <= ( PIO_SYNC(20),  PIO_SYNC(28),  PIO_SYNC(22),  PIO_SYNC(26),  PIO_SYNC(24), PIO_SYNC(30));     -- Slave-card 9 -> 6 electrical or 6 optical inputs
 
-
+---output readback
+--readback
+IOBP_Output_Readback(0) <= "0000000000"& IOBP_SK_Output(1);
+IOBP_Output_Readback(1) <= "0000000000"& IOBP_SK_Output(2);
+IOBP_Output_Readback(2) <= "0000000000"& IOBP_SK_Output(3);
+IOBP_Output_Readback(3) <=  (OTHERS => '0');
+IOBP_Output_Readback(4) <=  (OTHERS => '0');
+IOBP_Output_Readback(5) <=  (OTHERS => '0');
+IOBP_Output_Readback(6) <= (OTHERS => '0');
+IOBP_Output_Readback(7) <= (OTHERS => '0');
 
 ---------------- Output-Register(Maske) für die Iput- und Output Sel-LED's vom Slave 1-12
 
@@ -7457,6 +7518,7 @@ AW_Input_Reg(4)( 11 downto  6)<=   (Deb_Sync60( 47 downto  42) AND not IOBP_Mask
 AW_Input_Reg(4)(15 downto 12) <=   "0000";                 
 AW_Input_Reg(5)( 5 downto  0) <=   (Deb_Sync60(53 DOWNTO 48) AND not IOBP_Masken_Reg6( 5 downto  0));     -- Input, IO-Modul Nr. 9
 AW_Input_Reg(5)( 15 downto  5) <=  "00000000000";  
+--
 
 --################################ Outputs AND Maske ##################################
 --  STANDARD OUTPUT OUTREG
@@ -7489,7 +7551,7 @@ IOBP_Aktiv_LED_i(12) <=  IOBP_SK_Output(3);                                     
 When others =>  --for i in 1 to 12 loop 
   --if (IOBP_ID(i) = c_BP_5LWLIO2.ID or IOBP_ID(i)= c_BP_5LEMOIO2.ID or IOBP_ID(i)="00000000" or IOBP_ID(i)="11111111") then 
   (PIO_OUT(112), PIO_OUT(48), PIO_OUT(130), PIO_OUT(30), PIO_OUT(137), PIO_OUT(35),
-  PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output; ----------- Data_Output-Pin's der "Slave-Karten 12-1"
+  PIO_OUT(119), PIO_OUT(53), PIO_OUT(101), PIO_OUT(73), PIO_OUT(96),  PIO_OUT(56))   <= IOBP_Output(12 downto 1); ----------- Data_Output-Pin's der "Slave-Karten 12-1"
  
  (PIO_ENA(112), PIO_ENA(48), PIO_ENA(130), PIO_ENA(30), PIO_ENA(137), PIO_ENA(35),
   PIO_ENA(119), PIO_ENA(53), PIO_ENA(101), PIO_ENA(73), PIO_ENA(96),  PIO_ENA(56))   <= std_logic_vector'("111111111111");   -- Output Enable
